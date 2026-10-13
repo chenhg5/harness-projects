@@ -6,11 +6,11 @@ a claim that every feature is implemented today.
 
 | Capability | Current `hp` | Target in Harness Projects | Provider-neutral abstraction |
 | --- | --- | --- | --- |
-| Long-lived project goal | File scaffold | Goal, constraints, acceptance criteria, instructions | `Project` and `Goal` |
+| Long-lived project goal | Goal JSON resources and project files | Goal, constraints, acceptance criteria, instructions | `Project` and `Goal` |
 | Shared project context | Markdown files | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
-| Task decomposition | None | Task graph with dependencies and parallel branches | `TaskGraph` |
-| Coordinator | None | Plan, route, observe, aggregate, replan | `Coordinator` |
-| Execution sessions | None | Resumable runs and provider threads | `Run` and `Thread` |
+| Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
+| Coordinator | Local readiness plan | Plan, route, observe, aggregate, replan | `Coordinator` |
+| Execution sessions | Run JSON resources | Resumable runs and provider threads | `Run` and `Thread` |
 | Claude Code integration | Generated entry files only | Thread/session adapter | `ExecutionAdapter` |
 | Cursor integration | Generated rule file only | Project and Agent adapter | `ExecutionAdapter` |
 | Codex integration | Generated skill mount only | Session and skill adapter | `ExecutionAdapter` |
