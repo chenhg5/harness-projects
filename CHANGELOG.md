@@ -13,3 +13,7 @@ All notable changes to Harness Projects will be documented here.
   Projects.
 - Expanded `hp project init` with first-class goals, tasks, runs, Agents,
   context, events, verification, and integration directories.
+- Added local goal, task, dependency-readiness, and run persistence with JSON
+  schemas and agent-friendly CLI commands.
+- Added the first local Coordinator plan that separates dispatchable tasks from
+  tasks waiting on dependencies.

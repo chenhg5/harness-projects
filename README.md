@@ -108,8 +108,9 @@ examples/   Complete example projects
 ## Capability status
 
 The repository is in the foundation phase. The current CLI can create and
-validate the project file structure and safely read or write project files. The
-runtime capabilities are being specified next:
+validate the project file structure, safely read or write project files, persist
+goals, tasks, and runs, and compute a local Coordinator plan. The next runtime
+capabilities are:
 
 1. Project goals, instructions, memory, and acceptance criteria;
 2. Tasks, dependencies, runs, agents, and handoffs;

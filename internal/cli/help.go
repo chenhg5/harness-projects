@@ -1,5 +1,7 @@
 package cli
 
+import "github.com/chenhg5/harness-projects/internal/model"
+
 const rootHelp = `Harness Projects CLI (hp)
 
 Examples:
@@ -9,6 +11,10 @@ Examples:
 
 Commands:
   project init|status|validate    Create and inspect Harness Projects
+  goal create|list|get|update     Manage long-lived project goals
+  task create|list|get|update|ready Manage dependent work items
+  run create|list|get|update      Manage execution attempts
+  coordinator plan                Plan currently dispatchable work
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
 
@@ -18,9 +24,13 @@ Exit codes: 0 success, 1 operation/validation error, 2 usage, 3 not found,
 `
 
 var groupHelp = map[string]string{
-	"project": "Project commands: init, status, validate\nExample: hp project init --path ./my-project\n",
-	"file":    "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
-	"schema":  "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
+	"project":     "Project commands: init, status, validate\nExample: hp project init --path ./my-project\n",
+	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
+	"task":        "Task commands: create, list, get, update, ready\nExample: hp task ready --project ./my-project\n",
+	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
+	"coordinator": "Coordinator commands: plan\nExample: hp coordinator plan --project ./my-project\n",
+	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
+	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
 }
 
 var commandHelp = map[string]string{
@@ -46,6 +56,48 @@ var commandHelp = map[string]string{
 	"file read": `hp file read --project <directory> --section <section> --path <relative-path> [--format json|text]
   Read one project file.
   Example: hp file read --project ./checkout --section state --path current-plan.md --json
+`,
+	"goal create": `hp goal create --project <directory> --id <id> --title <title> [--status draft|active|completed|archived] [--acceptance a,b] [--dry-run]
+  Create a long-lived project goal.
+`,
+	"goal list": `hp goal list --project <directory> [--status <status>] [--format json|text]
+  List project goals.
+`,
+	"goal get": `hp goal get --project <directory> --id <id> [--format json|text]
+  Read one goal.
+`,
+	"goal update": `hp goal update --project <directory> --id <id> [--title <title>] [--status <status>] [--dry-run]
+  Update selected goal fields.
+`,
+	"task create": `hp task create --project <directory> --id <id> --title <title> [--goal-id <id>] [--depends-on a,b] [--status pending|ready|blocked] [--dry-run]
+  Create a task and validate its dependency references.
+`,
+	"task list": `hp task list --project <directory> [--status <status>] [--goal-id <id>] [--format json|text]
+  List tasks.
+`,
+	"task get": `hp task get --project <directory> --id <id> [--format json|text]
+  Read one task.
+`,
+	"task update": `hp task update --project <directory> --id <id> [--status <status>] [--depends-on a,b] [--dry-run]
+  Update selected task fields.
+`,
+	"task ready": `hp task ready --project <directory> [--format json|text]
+  Compute tasks whose dependencies are complete and which can be dispatched.
+`,
+	"run create": `hp run create --project <directory> --id <id> --task-id <id> [--adapter local] [--worktree <path>] [--dry-run]
+  Record a planned execution attempt. It does not start a provider process.
+`,
+	"run list": `hp run list --project <directory> [--task-id <id>] [--status <status>] [--format json|text]
+  List execution attempts.
+`,
+	"run get": `hp run get --project <directory> --id <id> [--format json|text]
+  Read one execution attempt.
+`,
+	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--error <message>] [--dry-run]
+  Update run state and record timestamps for terminal states.
+`,
+	"coordinator plan": `hp coordinator plan --project <directory> [--format json|text]
+  Compute dispatchable and waiting tasks without starting an Agent.
 `,
 	"schema list": `hp schema list [--format json|text]
   List introspectable CLI commands.
@@ -77,6 +129,19 @@ var commandSchemas = map[string]commandSchema{
 	"project validate": {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},
 	"file write":       {"file write", "Write a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"from", "string", true, nil}, {"replace", "boolean", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file write --project ./my-project --section spec --path requirements.md --from ./draft.md"}},
 	"file read":        {"file read", "Read a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file read --project ./my-project --section spec --path requirements.md --json"}},
+	"goal create":      {"goal create", "Create a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"description", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal create --project ./my-project --id modernize-api --title 'Modernize API'"}},
+	"goal list":        {"goal list", "List project goals", []flagSchema{{"project", "string", true, nil}, {"status", "enum", false, model.GoalStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal list --project ./my-project --json"}},
+	"goal get":         {"goal get", "Read a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal get --project ./my-project --id modernize-api --json"}},
+	"goal update":      {"goal update", "Update a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", false, nil}, {"description", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal update --project ./my-project --id modernize-api --status active"}},
+	"task create":      {"task create", "Create a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"goal-id", "string", false, nil}, {"depends-on", "string", false, nil}, {"agent-id", "string", false, nil}, {"status", "enum", false, model.TaskStatuses()}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task create --project ./my-project --id inventory-api --title 'Inventory API'"}},
+	"task get":         {"task get", "Read a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task get --project ./my-project --id inventory-api --json"}},
+	"task update":      {"task update", "Update a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.TaskStatuses()}, {"depends-on", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task update --project ./my-project --id inventory-api --status completed"}},
+	"task ready":       {"task ready", "List dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task ready --project ./my-project --json"}},
+	"run create":       {"run create", "Create a planned execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"adapter", "string", false, nil}, {"worktree", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run create --project ./my-project --id run-001 --task-id inventory-api"}},
+	"run list":         {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
+	"run get":          {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
+	"run update":       {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
+	"coordinator plan": {"coordinator plan", "Compute dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator plan --project ./my-project --json"}},
 	"schema list":      {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":       {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},
 }

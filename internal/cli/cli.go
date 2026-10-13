@@ -75,6 +75,34 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.fileWrite(args[2:])
 	case "file read":
 		return a.fileRead(args[2:])
+	case "goal create":
+		return a.goalCreate(args[2:])
+	case "goal list":
+		return a.goalList(args[2:])
+	case "goal get":
+		return a.goalGet(args[2:])
+	case "goal update":
+		return a.goalUpdate(args[2:])
+	case "task create":
+		return a.taskCreate(args[2:])
+	case "task list":
+		return a.taskList(args[2:])
+	case "task get":
+		return a.taskGet(args[2:])
+	case "task update":
+		return a.taskUpdate(args[2:])
+	case "task ready":
+		return a.taskReady(args[2:])
+	case "run create":
+		return a.runCreate(args[2:])
+	case "run list":
+		return a.runList(args[2:])
+	case "run get":
+		return a.runGet(args[2:])
+	case "run update":
+		return a.runUpdate(args[2:])
+	case "coordinator plan":
+		return a.coordinatorPlan(args[2:])
 	case "schema list":
 		return a.schemaList(args[2:])
 	case "schema get":

@@ -22,15 +22,24 @@ hp file read --project ./my-project --section state \
   --path current-plan.md --format text
 hp schema list --format json
 hp schema get --command "file write" --format json
+
+hp goal create --project ./my-project --id modernize-api \
+  --title "Modernize API" --status active
+hp task create --project ./my-project --id inventory-api \
+  --title "Inventory API" --goal-id modernize-api
+hp task ready --project ./my-project --format json
+hp run create --project ./my-project --id run-001 --task-id inventory-api
+hp run update --project ./my-project --id run-001 --status running
+hp coordinator plan --project ./my-project --format json
 ```
 
 The planned command surface is:
 
 ```text
 hp project create|inspect|update|validate
-hp goal get|set
-hp task create|list|inspect|cancel|retry
-hp run list|inspect|pause|resume|cancel|logs
+hp goal create|list|get|update
+hp task create|list|get|update|ready
+hp run create|list|get|update
 hp agent list|inspect|start|stop
 hp context search|add|forget
 hp repository add|list|remove
@@ -38,6 +47,7 @@ hp worktree create|list|remove
 hp event subscribe|list|test
 hp handoff create|list|show
 hp artifact list|inspect
+hp coordinator plan
 ```
 
 These commands are intentionally planned as resources and verbs. They will be
