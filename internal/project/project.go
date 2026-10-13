@@ -41,8 +41,9 @@ type Status struct {
 }
 
 var directories = []string{
-	"spec", "handoffs", "skills/shared/project-context", "scripts/shared",
-	"repos", "state", "artifacts", ".harness-project", ".codex/skills",
+	"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events",
+	"verification", "skills/shared/project-context", "scripts/shared", "repos",
+	"state", "artifacts", "integrations", ".harness-project", ".codex/skills",
 	".claude/skills", ".cursor/rules",
 }
 
@@ -85,17 +86,25 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		return InitResult{}, nil, err
 	}
 	files := map[string][]byte{
-		"PROJECT.md":                             []byte("# " + name + "\n\nDescribe the project goal, scope, and participating repositories here.\n\n## Current work\n\nRead `state/current-plan.md` and the latest file in `handoffs/`.\n"),
-		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project. Read `PROJECT.md`, `.harness-project/project.json`, `state/current-plan.md`, and the latest handoff before changing code. Project specifications live in `spec/`. Code repositories live in `repos/`. Record durable decisions in `spec/` and write a new handoff when transferring work.\n"),
+		"PROJECT.md":                             []byte("# " + name + "\n\nDescribe the project goal, scope, constraints, and participating repositories here.\n\n## Current work\n\nRead `state/current-plan.md`, the active goal in `goals/`, and the latest handoff in `handoffs/`.\n"),
+		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project. Read `PROJECT.md`, `.harness-project/project.json`, `goals/`, `state/current-plan.md`, and the latest handoff before changing code. Project specifications live in `spec/`. Tasks and runs live in `tasks/` and `runs/`. Code repositories live in `repos/`. Record durable decisions in `spec/` and write a new handoff when transferring work.\n"),
 		"CLAUDE.md":                              []byte("# Claude Code project instructions\n\nFollow `AGENTS.md` and read `PROJECT.md` for the shared project context. The canonical project files are outside `.claude/`.\n"),
 		"spec/README.md":                         []byte("# Project specifications\n\nKeep the current requirements, architecture, interfaces, and decisions here. Use separate files for separate concerns.\n"),
+		"goals/README.md":                        []byte("# Goals\n\nRecord long-lived project outcomes, constraints, and acceptance criteria here. A goal may span many tasks and runs.\n"),
+		"tasks/README.md":                        []byte("# Tasks\n\nStore task records and dependency metadata here. A task may have multiple execution runs.\n"),
+		"runs/README.md":                         []byte("# Runs\n\nStore execution attempts, status transitions, inputs, outputs, and provider references here.\n"),
+		"agents/README.md":                       []byte("# Agents\n\nRecord provider-neutral Agent roles and their execution adapter configuration here.\n"),
+		"context/README.md":                      []byte("# Context and memory\n\nStore durable research, project knowledge, and indexed context sources here.\n"),
 		"handoffs/README.md":                     []byte("# Handoffs\n\nAdd one dated Markdown file per handoff. Include the goal, completed work, next actions, repository branches and commits, verification, and blockers. Do not overwrite previous handoffs.\n"),
+		"events/README.md":                       []byte("# Events\n\nRecord incoming events and trigger definitions here. Event processing must be idempotent.\n"),
+		"verification/README.md":                 []byte("# Verification\n\nRecord acceptance checks, test runs, review results, and evidence for project outputs here.\n"),
 		"skills/shared/project-context/SKILL.md": []byte("---\nname: project-context\ndescription: Read the portable context of a Harness Project before work and record a handoff when transferring it.\n---\n\n# Project context\n\n1. Read `PROJECT.md` and `.harness-project/project.json`.\n2. Read `state/current-plan.md`, relevant files in `spec/`, and the latest handoff.\n3. Inspect each relevant repository in `repos/` before editing.\n4. Update the plan and append a handoff when transferring work.\n"),
 		"scripts/shared/README.md":               []byte("# Shared scripts\n\nPut project-wide scripts here. Keep repository-specific scripts in their repositories.\n"),
 		"repos/README.md":                        []byte("# Repositories\n\nPlace linked repository worktrees here. Record their purpose and branch in `PROJECT.md`.\n"),
 		"state/status.md":                        []byte("# Status\n\nProject created.\n"),
 		"state/current-plan.md":                  []byte("# Current plan\n\n1. Define the project goal and acceptance criteria in `PROJECT.md`.\n2. Add repository worktrees under `repos/`.\n3. Write the first task plan here.\n"),
 		"artifacts/README.md":                    []byte("# Artifacts\n\nStore generated project outputs that are not part of a source repository here.\n"),
+		"integrations/README.md":                 []byte("# Integrations\n\nRecord provider, repository, event, and runner adapter configuration here.\n"),
 		".harness-project/project.json":          append(manifest, '\n'),
 		".cursor/rules/harness-project.mdc":      []byte("---\ndescription: Shared Harness Project context\nalwaysApply: true\n---\n\nRead `AGENTS.md` and `PROJECT.md` before work. Use `state/current-plan.md`, `spec/`, and `handoffs/` for portable project context.\n"),
 	}
@@ -118,9 +127,11 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 }
 
 var fileOrder = []string{
-	"PROJECT.md", "AGENTS.md", "CLAUDE.md", "spec/README.md", "handoffs/README.md",
+	"PROJECT.md", "AGENTS.md", "CLAUDE.md", "spec/README.md", "goals/README.md",
+	"tasks/README.md", "runs/README.md", "agents/README.md", "context/README.md",
+	"handoffs/README.md", "events/README.md", "verification/README.md",
 	"skills/shared/project-context/SKILL.md", "scripts/shared/README.md", "repos/README.md",
-	"state/status.md", "state/current-plan.md", "artifacts/README.md",
+	"state/status.md", "state/current-plan.md", "artifacts/README.md", "integrations/README.md",
 	".harness-project/project.json", ".cursor/rules/harness-project.mdc",
 }
 

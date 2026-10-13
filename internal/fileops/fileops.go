@@ -16,8 +16,10 @@ import (
 const MaxContentBytes = 4 << 20
 
 var allowedSections = map[string]bool{
-	"spec": true, "handoffs": true, "skills": true, "scripts": true,
-	"state": true, "artifacts": true,
+	"spec": true, "goals": true, "tasks": true, "runs": true, "agents": true,
+	"context": true, "handoffs": true, "events": true, "verification": true,
+	"skills": true, "scripts": true, "state": true, "artifacts": true,
+	"integrations": true,
 }
 
 type WritePlan struct {
@@ -36,7 +38,7 @@ type WritePlan struct {
 
 func Target(root, section, relative string) (string, error) {
 	if !allowedSections[section] {
-		return "", fmt.Errorf("invalid section %q; use spec, handoffs, skills, scripts, state, or artifacts", section)
+		return "", fmt.Errorf("invalid section %q; use a canonical project section", section)
 	}
 	if relative == "" || filepath.IsAbs(relative) || relative == "." || strings.Contains(relative, "\\") {
 		return "", fmt.Errorf("invalid relative path %q", relative)

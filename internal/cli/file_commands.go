@@ -9,7 +9,7 @@ import (
 func (a app) fileWrite(args []string) int {
 	fs := newFlags("file write")
 	root := fs.String("project", "", "project directory (required)")
-	section := fs.String("section", "", "spec|handoffs|skills|scripts|state|artifacts (required)")
+	section := fs.String("section", "", "canonical project section (required)")
 	relative := fs.String("path", "", "path relative to section (required)")
 	source := fs.String("from", "", "source file or - for stdin (required)")
 	format, jsonFlag := outputFlags(fs)
@@ -47,7 +47,7 @@ func (a app) fileWrite(args []string) int {
 func (a app) fileRead(args []string) int {
 	fs := newFlags("file read")
 	root := fs.String("project", "", "project directory (required)")
-	section := fs.String("section", "", "spec|handoffs|skills|scripts|state|artifacts (required)")
+	section := fs.String("section", "", "canonical project section (required)")
 	relative := fs.String("path", "", "path relative to section (required)")
 	format, jsonFlag := outputFlags(fs)
 	if err := parse(fs, args); err != nil {

@@ -1,27 +1,66 @@
 # Harness Projects
 
-An open project standard for interoperable AI coding harnesses.
+An open-source Projects platform for Claude Code, Cursor, Codex, and other AI
+coding harnesses.
 
-Harness Projects defines a portable structure for software work that may span
-multiple repositories, worktrees, coding agents, and development sessions.
-The project directory is the shared source of context. Individual harnesses
-such as Claude Code, Cursor, Codex, and other tools consume that context
-through small, generated adapters.
+Harness Projects is an open, interoperable counterpart to the product ideas
+behind Claude Code Projects and Cursor Projects. It is more than a directory
+standard: it is a project coordination layer for long-running software work
+across repositories, worktrees, agents, coding harnesses, and development
+sessions.
 
-## Goals
+The project directory remains the durable source of context, while the runtime
+will provide coordination, task execution, shared memory, event triggers,
+verification, and harness adapters.
 
-- Keep project context portable across coding harnesses.
-- Treat a multi-repository task as one coherent project.
-- Preserve plans, specifications, decisions, and handoffs as durable files.
-- Keep harness-specific integration code separate from the project model.
-- Make the standard usable locally without a hosted service.
+## Product goals
 
-## Non-goals
+- Define a long-lived project goal, constraints, instructions, and acceptance
+  criteria.
+- Coordinate dependent and parallel tasks through a shared task graph.
+- Run work through Claude Code, Cursor, Codex, and other execution backends.
+- Preserve project memory, decisions, research, plans, handoffs, and evidence.
+- Isolate repository worktrees and execution environments for each run.
+- React to human requests, pull requests, CI results, issue events, and
+  schedules.
+- Let humans inspect, pause, redirect, approve, retry, and stop work.
+- Keep the project model portable so a harness can be replaced without losing
+  the project.
 
-- Replacing coding harnesses or agent runtimes.
-- Defining a single model, vendor, or orchestration strategy.
-- Hiding project state in a proprietary database.
-- Requiring every project to use the same repository hosting provider.
+## What the product contains
+
+```text
+Project
+├── Goal and instructions
+├── Coordinator
+│   ├── Task graph and dependencies
+│   ├── Agent and Thread lifecycle
+│   ├── Scheduling and routing
+│   └── Human approval points
+├── Shared context and memory
+├── Execution backends
+│   ├── Claude Code
+│   ├── Cursor
+│   ├── Codex
+│   └── Generic local or remote runners
+├── Repository and worktree manager
+├── Events and triggers
+├── Verification and artifact collection
+└── Harness adapters
+```
+
+The first release is local-first and file-based. The architecture leaves room
+for remote runners and hosted event services without making them mandatory.
+
+## Boundaries
+
+- Harness Projects does not replace Claude Code, Cursor, Codex, or another
+  execution harness. It coordinates them through adapters.
+- It does not require one model, vendor, repository host, or execution
+  environment.
+- It does not hide the durable project state in a proprietary database.
+- A project may use only one harness; interoperability is an available
+  capability, not a requirement for every run.
 
 ## Project layout
 
@@ -31,12 +70,20 @@ A Harness Project is organized around the project, not around one repository:
 my-project/
 ├── PROJECT.md
 ├── spec/
+├── goals/
+├── tasks/
+├── runs/
+├── agents/
+├── context/
 ├── handoffs/
+├── events/
+├── verification/
 ├── skills/
 ├── scripts/
 ├── repos/
 ├── state/
 ├── artifacts/
+├── integrations/
 ├── .codex/
 ├── .claude/
 ├── .cursor/
@@ -58,11 +105,21 @@ templates/  Starter files for generated projects
 examples/   Complete example projects
 ```
 
-## Status
+## Capability status
 
-This repository is in the design stage. The first milestone will define the
-project manifest, directory contract, handoff format, and skill mount rules.
-Backward-compatible changes will be documented in `CHANGELOG.md`.
+The repository is in the foundation phase. The current CLI can create and
+validate the project file structure and safely read or write project files. The
+runtime capabilities are being specified next:
+
+1. Project goals, instructions, memory, and acceptance criteria;
+2. Tasks, dependencies, runs, agents, and handoffs;
+3. Repository/worktree and execution backend adapters;
+4. Coordinator scheduling, retries, approvals, and result aggregation;
+5. Events, subscriptions, schedules, and continuous project operation.
+
+See [docs/product.md](docs/product.md) and
+[docs/capability-map.md](docs/capability-map.md). Backward-compatible changes
+will be documented in `CHANGELOG.md`.
 
 ## CLI
 

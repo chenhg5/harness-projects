@@ -2,6 +2,7 @@
 
 `hp` is the reference CLI for creating and maintaining Harness Projects. It
 uses a noun-verb command tree so agents can discover commands incrementally.
+The CLI is the local control plane for the future Coordinator and adapters.
 
 ## Build
 
@@ -22,6 +23,25 @@ hp file read --project ./my-project --section state \
 hp schema list --format json
 hp schema get --command "file write" --format json
 ```
+
+The planned command surface is:
+
+```text
+hp project create|inspect|update|validate
+hp goal get|set
+hp task create|list|inspect|cancel|retry
+hp run list|inspect|pause|resume|cancel|logs
+hp agent list|inspect|start|stop
+hp context search|add|forget
+hp repository add|list|remove
+hp worktree create|list|remove
+hp event subscribe|list|test
+hp handoff create|list|show
+hp artifact list|inspect
+```
+
+These commands are intentionally planned as resources and verbs. They will be
+added only when their file and adapter contracts are specified.
 
 Commands that write files support `--dry-run`. A successful dry run exits with
 code `10`. Non-TTY output defaults to JSON. JSON data goes to stdout and

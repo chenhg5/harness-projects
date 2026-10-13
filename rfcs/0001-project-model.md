@@ -23,12 +23,20 @@ An implementation of the standard MUST provide these canonical areas:
 ```text
 PROJECT.md
 spec/
+goals/
+tasks/
+runs/
+agents/
+context/
 handoffs/
+events/
+verification/
 skills/
 scripts/
 repos/
 state/
 artifacts/
+integrations/
 .harness-project/
 ```
 

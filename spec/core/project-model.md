@@ -17,12 +17,20 @@ An initialized Harness Project MUST contain:
 ```text
 PROJECT.md
 spec/
+goals/
+tasks/
+runs/
+agents/
+context/
 handoffs/
+events/
+verification/
 skills/
 scripts/
 repos/
 state/
 artifacts/
+integrations/
 .harness-project/
 ```
 
