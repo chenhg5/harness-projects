@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Local build output
+dist/
+build/
+bin/
+
+# Local development state
+.harness-project/local/
