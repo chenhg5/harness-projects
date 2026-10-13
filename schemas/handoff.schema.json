@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenhg5/harness-projects/schemas/handoff.schema.json",
+  "title": "Harness Project Handoff Metadata",
+  "type": "object",
+  "required": ["from", "to", "createdAt", "project"],
+  "properties": {
+    "from": { "type": "string", "minLength": 1 },
+    "to": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "project": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

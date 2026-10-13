@@ -50,6 +50,7 @@ files and skill mounts make those files discoverable by each supported harness.
 
 ```text
 spec/       The standard and its versioned specifications
+rfcs/       Proposed standard changes and review records
 schemas/    Machine-readable schemas
 adapters/   Harness-specific entry points and mappings
 skills/     Shared and harness-specific skills
@@ -62,6 +63,18 @@ examples/   Complete example projects
 This repository is in the design stage. The first milestone will define the
 project manifest, directory contract, handoff format, and skill mount rules.
 Backward-compatible changes will be documented in `CHANGELOG.md`.
+
+## CLI
+
+The reference CLI is written in Go and is called `hp`:
+
+```bash
+go build -o ./bin/hp ./cmd/hp
+./bin/hp project init --path ./my-project --name "My Project"
+./bin/hp project validate --path ./my-project --format json
+```
+
+See [docs/cli.md](docs/cli.md) for the command contract.
 
 ## Contributing
 

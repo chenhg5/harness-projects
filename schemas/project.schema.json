@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenhg5/harness-projects/schemas/project.schema.json",
+  "title": "Harness Project Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "name", "createdAt"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1" },
+    "name": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

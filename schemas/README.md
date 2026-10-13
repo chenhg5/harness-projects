@@ -1,4 +1,5 @@
 # Schemas
 
 Machine-readable schemas for project manifests, state, repositories, and
-handoffs will be added here once the corresponding specifications stabilize.
+handoffs live here. Schemas follow the JSON Schema 2020-12 vocabulary where
+possible and may allow forward-compatible extension fields.
