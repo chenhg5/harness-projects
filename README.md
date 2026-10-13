@@ -109,12 +109,12 @@ examples/   Complete example projects
 
 The repository is in the foundation phase. The current CLI can create and
 validate the project file structure, safely read or write project files, persist
-goals, tasks, and runs, and compute a local Coordinator plan. The next runtime
-capabilities are:
+goals, tasks, and runs, compute a local Coordinator plan, register repositories,
+and create or remove local Git worktrees. The next runtime capabilities are:
 
 1. Project goals, instructions, memory, and acceptance criteria;
 2. Tasks, dependencies, runs, agents, and handoffs;
-3. Repository/worktree and execution backend adapters;
+3. Repository clone, remote branch, and execution backend adapters;
 4. Coordinator scheduling, retries, approvals, and result aggregation;
 5. Events, subscriptions, schedules, and continuous project operation.
 

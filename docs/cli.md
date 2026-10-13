@@ -30,32 +30,13 @@ hp task create --project ./my-project --id inventory-api \
 hp task ready --project ./my-project --format json
 hp run create --project ./my-project --id run-001 --task-id inventory-api
 hp run update --project ./my-project --id run-001 --status running
+hp repository add --project ./my-project --id api --path ../api --default-branch main
+hp worktree create --project ./my-project --id api-task --repository-id api
+hp worktree list --project ./my-project --status active
+hp worktree remove --project ./my-project --id api-task
 hp coordinator plan --project ./my-project --format json
 ```
-
-The planned command surface is:
-
-```text
-hp project create|inspect|update|validate
-hp goal create|list|get|update
-hp task create|list|get|update|ready
-hp run create|list|get|update
-hp agent list|inspect|start|stop
-hp context search|add|forget
-hp repository add|list|remove
-hp worktree create|list|remove
-hp event subscribe|list|test
-hp handoff create|list|show
-hp artifact list|inspect
-hp coordinator plan
-```
-
-These commands are intentionally planned as resources and verbs. They will be
-added only when their file and adapter contracts are specified.
 
 Commands that write files support `--dry-run`. A successful dry run exits with
 code `10`. Non-TTY output defaults to JSON. JSON data goes to stdout and
 machine-readable errors go to stderr.
-
-The first release intentionally keeps repository and worktree operations out
-of the CLI until the project manifest and safety rules are stable.

@@ -1,6 +1,9 @@
 package cli
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 func (a app) schemaList(args []string) int {
 	fs := newFlags("schema list")
@@ -8,7 +11,11 @@ func (a app) schemaList(args []string) int {
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
 	}
-	commands := []string{"project init", "project status", "project validate", "file write", "file read", "schema list", "schema get"}
+	commands := make([]string, 0, len(commandSchemas))
+	for command := range commandSchemas {
+		commands = append(commands, command)
+	}
+	sort.Strings(commands)
 	a.emit(map[string]any{"commands": commands}, strings.Join(commands, "\n"), selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }

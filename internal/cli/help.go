@@ -14,6 +14,8 @@ Commands:
   goal create|list|get|update     Manage long-lived project goals
   task create|list|get|update|ready Manage dependent work items
   run create|list|get|update      Manage execution attempts
+  repository add|list|get         Register participating code repositories
+  worktree create|list|get|remove Manage isolated Git worktrees
   coordinator plan                Plan currently dispatchable work
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
@@ -28,6 +30,8 @@ var groupHelp = map[string]string{
 	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
 	"task":        "Task commands: create, list, get, update, ready\nExample: hp task ready --project ./my-project\n",
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
+	"repository":  "Repository commands: add, list, get\nExample: hp repository add --project ./my-project --id api --path ../api\n",
+	"worktree":    "Worktree commands: create, list, get, remove\nExample: hp worktree create --project ./my-project --id api-task --repository-id api\n",
 	"coordinator": "Coordinator commands: plan\nExample: hp coordinator plan --project ./my-project\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
 	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
@@ -96,6 +100,27 @@ var commandHelp = map[string]string{
 	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--error <message>] [--dry-run]
   Update run state and record timestamps for terminal states.
 `,
+	"repository add": `hp repository add --project <directory> --id <id> [--url <url>] [--path <local-git-repository>] [--default-branch <branch>] [--provider <name>] [--if-not-exists] [--dry-run]
+  Register a repository used by this project. Registration never clones or changes the repository.
+`,
+	"repository list": `hp repository list --project <directory> [--format json|text]
+  List registered repositories.
+`,
+	"repository get": `hp repository get --project <directory> --id <id> [--format json|text]
+  Read one repository registration.
+`,
+	"worktree create": `hp worktree create --project <directory> --id <id> --repository-id <id> [--path <directory>] [--branch <branch>] [--base <revision>] [--dry-run]
+  Create and register an isolated Git worktree under the project repos directory.
+`,
+	"worktree list": `hp worktree list --project <directory> [--repository-id <id>] [--status <status>] [--format json|text]
+  List registered worktrees.
+`,
+	"worktree get": `hp worktree get --project <directory> --id <id> [--format json|text]
+  Read one worktree registration.
+`,
+	"worktree remove": `hp worktree remove --project <directory> --id <id> [--force] [--dry-run] [--format json|text]
+  Remove the Git worktree and mark its registration as removed.
+`,
 	"coordinator plan": `hp coordinator plan --project <directory> [--format json|text]
   Compute dispatchable and waiting tasks without starting an Agent.
 `,
@@ -141,6 +166,13 @@ var commandSchemas = map[string]commandSchema{
 	"run list":         {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
 	"run get":          {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
 	"run update":       {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
+	"repository add":   {"repository add", "Register a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"url", "string", false, nil}, {"path", "string", false, nil}, {"default-branch", "string", false, nil}, {"provider", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository add --project ./my-project --id api --path ../api"}},
+	"repository list":  {"repository list", "List project repositories", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository list --project ./my-project --json"}},
+	"repository get":   {"repository get", "Read a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository get --project ./my-project --id api --json"}},
+	"worktree create":  {"worktree create", "Create a Git worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"repository-id", "string", true, nil}, {"path", "string", false, nil}, {"branch", "string", false, nil}, {"base", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree create --project ./my-project --id api-task --repository-id api"}},
+	"worktree list":    {"worktree list", "List project worktrees", []flagSchema{{"project", "string", true, nil}, {"repository-id", "string", false, nil}, {"status", "enum", false, model.WorktreeStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree list --project ./my-project --json"}},
+	"worktree get":     {"worktree get", "Read a project worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree get --project ./my-project --id api-task --json"}},
+	"worktree remove":  {"worktree remove", "Remove a Git worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"force", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree remove --project ./my-project --id api-task --force"}},
 	"coordinator plan": {"coordinator plan", "Compute dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator plan --project ./my-project --json"}},
 	"schema list":      {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":       {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},

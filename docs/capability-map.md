@@ -14,7 +14,7 @@ a claim that every feature is implemented today.
 | Claude Code integration | Generated entry files only | Thread/session adapter | `ExecutionAdapter` |
 | Cursor integration | Generated rule file only | Project and Agent adapter | `ExecutionAdapter` |
 | Codex integration | Generated skill mount only | Session and skill adapter | `ExecutionAdapter` |
-| Repository isolation | Directory placeholder | Clone, branch, worktree, environment mapping | `RepositoryAdapter` |
+| Repository isolation | Repository registration and local Git worktree lifecycle | Clone, remote branch, worktree, environment mapping | `RepositoryAdapter` |
 | Verification | CLI structure validation | Tests, CI, review, acceptance gates, evidence | `Verifier` |
 | Handoffs | Manual Markdown records | Structured resumable transfer between runs | `HandoffStore` |
 | Events and schedules | None | PR, CI, issue, Slack, webhook, and timer triggers | `EventAdapter` |

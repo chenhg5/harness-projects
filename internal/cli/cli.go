@@ -101,6 +101,20 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.runGet(args[2:])
 	case "run update":
 		return a.runUpdate(args[2:])
+	case "repository add":
+		return a.repositoryAdd(args[2:])
+	case "repository list":
+		return a.repositoryList(args[2:])
+	case "repository get":
+		return a.repositoryGet(args[2:])
+	case "worktree create":
+		return a.worktreeCreate(args[2:])
+	case "worktree list":
+		return a.worktreeList(args[2:])
+	case "worktree get":
+		return a.worktreeGet(args[2:])
+	case "worktree remove":
+		return a.worktreeRemove(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
 	case "schema list":

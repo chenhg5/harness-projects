@@ -7,6 +7,8 @@ per resource:
 goals/<goal-id>.json
 tasks/<task-id>.json
 runs/<run-id>.json
+.harness-project/repositories/<repository-id>.json
+.harness-project/worktrees/<worktree-id>.json
 ```
 
 ## Goals
@@ -29,3 +31,15 @@ Run statuses are `planned`, `running`, `succeeded`, `failed`, `paused`, and
 
 The provider-neutral run ID remains stable even when a run is handed from one
 harness adapter to another.
+
+## Repositories and worktrees
+
+A repository registration identifies a participating source repository by URL
+and/or local path. Registration is metadata only; it does not clone or mutate
+the source repository.
+
+A worktree is an isolated checkout created from a registered local Git
+repository. `hp worktree create` records the requested branch and base revision,
+creates the checkout under `repos/` by default, and marks it `active` after Git
+has succeeded. `hp worktree remove` removes the checkout and retains a
+`removed` record for auditability.

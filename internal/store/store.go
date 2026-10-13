@@ -93,6 +93,9 @@ func readJSON[T any](path string) (T, error) {
 func listJSON[T any](directory string) ([]T, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return []T{}, nil
+		}
 		return nil, err
 	}
 	paths := make([]string, 0, len(entries))
