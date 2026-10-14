@@ -139,6 +139,12 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.cleanupPlan(args[2:])
 	case "cleanup apply":
 		return a.cleanupApply(args[2:])
+	case "state get":
+		return a.stateGet(args[2:], false)
+	case "state validate":
+		return a.stateGet(args[2:], true)
+	case "state update":
+		return a.stateUpdate(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
 	case "schema list":

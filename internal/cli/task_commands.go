@@ -14,10 +14,19 @@ func (a app) taskCreate(args []string) int {
 	id := fs.String("id", "", "task id (required)")
 	title := fs.String("title", "", "task title (required)")
 	description := fs.String("description", "", "task description")
+	deliverables := fs.String("deliverables", "", "comma-separated deliverables")
+	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	priority := fs.String("priority", "", "critical|high|medium|low")
+	owner := fs.String("owner", "", "task owner")
+	dueDate := fs.String("due-date", "", "due date")
+	blockedReason := fs.String("blocked-reason", "", "reason the task is blocked")
 	goalID := fs.String("goal-id", "", "parent goal id")
 	dependsOn := fs.String("depends-on", "", "comma-separated task ids")
 	agentID := fs.String("agent-id", "", "assigned Agent id")
 	status := fs.String("status", "pending", "pending|ready|blocked")
+	evidence := fs.String("evidence", "", "comma-separated verification evidence")
+	resultText := fs.String("result", "", "result summary")
+	verification := fs.String("verification", "", "comma-separated verification commands or checks")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	ifNotExists := fs.Bool("if-not-exists", false, "succeed if the task already exists")
@@ -31,7 +40,23 @@ func (a app) taskCreate(args []string) int {
 	if err != nil {
 		return a.fail(failure{2, "invalid_arguments", err.Error(), "Use comma-separated task ids", "--depends-on"})
 	}
-	task := model.Task{SchemaVersion: model.ResourceSchemaVersion, ID: *id, GoalID: *goalID, Title: *title, Description: *description, Status: *status, DependsOn: dependencies, AgentID: *agentID, CreatedAt: timestamp(), UpdatedAt: timestamp()}
+	deliverableList, err := commaList(*deliverables)
+	if err != nil {
+		return a.parseError(err)
+	}
+	acceptanceList, err := commaList(*acceptance)
+	if err != nil {
+		return a.parseError(err)
+	}
+	evidenceList, err := commaList(*evidence)
+	if err != nil {
+		return a.parseError(err)
+	}
+	verificationList, err := commaList(*verification)
+	if err != nil {
+		return a.parseError(err)
+	}
+	task := model.Task{SchemaVersion: model.ResourceSchemaVersion, ID: *id, GoalID: *goalID, Title: *title, Description: *description, Deliverables: deliverableList, Acceptance: acceptanceList, Priority: *priority, Owner: *owner, DueDate: *dueDate, Status: *status, DependsOn: dependencies, AgentID: *agentID, BlockedReason: *blockedReason, Result: *resultText, Evidence: evidenceList, Verification: verificationList, CreatedAt: timestamp(), UpdatedAt: timestamp()}
 	if err := model.ValidateTask(task); err != nil {
 		return a.operationError(err, *id)
 	}
@@ -135,9 +160,18 @@ func (a app) taskUpdate(args []string) int {
 	id := fs.String("id", "", "task id (required)")
 	title := fs.String("title", "", "new title")
 	description := fs.String("description", "", "new description")
+	deliverables := fs.String("deliverables", "", "comma-separated deliverables")
+	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	priority := fs.String("priority", "", "critical|high|medium|low")
+	owner := fs.String("owner", "", "task owner")
+	dueDate := fs.String("due-date", "", "due date")
+	blockedReason := fs.String("blocked-reason", "", "reason the task is blocked")
 	status := fs.String("status", "", "pending|ready|in_progress|blocked|completed|failed|cancelled")
 	dependsOn := fs.String("depends-on", "", "comma-separated task ids")
 	agentID := fs.String("agent-id", "", "assigned Agent id")
+	evidence := fs.String("evidence", "", "comma-separated verification evidence")
+	resultText := fs.String("result", "", "result summary")
+	verification := fs.String("verification", "", "comma-separated verification commands or checks")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	if err := parse(fs, args); err != nil {
@@ -160,6 +194,30 @@ func (a app) taskUpdate(args []string) int {
 	if flagSet(fs, "description") {
 		task.Description = *description
 	}
+	if flagSet(fs, "deliverables") {
+		task.Deliverables, err = commaList(*deliverables)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "acceptance") {
+		task.Acceptance, err = commaList(*acceptance)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "priority") {
+		task.Priority = *priority
+	}
+	if flagSet(fs, "owner") {
+		task.Owner = *owner
+	}
+	if flagSet(fs, "due-date") {
+		task.DueDate = *dueDate
+	}
+	if flagSet(fs, "blocked-reason") {
+		task.BlockedReason = *blockedReason
+	}
 	if flagSet(fs, "status") {
 		task.Status = *status
 	}
@@ -171,6 +229,21 @@ func (a app) taskUpdate(args []string) int {
 	}
 	if flagSet(fs, "agent-id") {
 		task.AgentID = *agentID
+	}
+	if flagSet(fs, "evidence") {
+		task.Evidence, err = commaList(*evidence)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "result") {
+		task.Result = *resultText
+	}
+	if flagSet(fs, "verification") {
+		task.Verification, err = commaList(*verification)
+		if err != nil {
+			return a.parseError(err)
+		}
 	}
 	for _, dependencyID := range task.DependsOn {
 		if dependencyID == task.ID {

@@ -6,7 +6,7 @@ a claim that every feature is implemented today.
 
 | Capability | Current `hp` | Target in Harness Projects | Provider-neutral abstraction |
 | --- | --- | --- | --- |
-| Long-lived project goal | Goal JSON resources and project files | Goal, constraints, acceptance criteria, instructions | `Project` and `Goal` |
+| Outcome-oriented project goal | Goal JSON resources with key results and evidence | Goal, constraints, measurable results, instructions, completion gates | `Project` and `Goal` |
 | Shared project context | Context files, searchable memory records, and handoffs | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
 | Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
 | Coordinator | Local readiness plan | Plan, route, observe, aggregate, replan | `Coordinator` |
@@ -15,7 +15,7 @@ a claim that every feature is implemented today.
 | Cursor integration | Generated rule file only | Project and Agent adapter | `ExecutionAdapter` |
 | Codex integration | Generated skill mount only | Session and skill adapter | `ExecutionAdapter` |
 | Repository isolation | Repository registration and local Git worktree lifecycle | Clone, remote branch, worktree, environment mapping | `RepositoryAdapter` |
-| Verification | CLI structure validation | Tests, CI, review, acceptance gates, evidence | `Verifier` |
+| Verification | Run/task evidence fields and project state validation | Tests, CI, review, acceptance gates, evidence aggregation | `Verifier` |
 | Handoffs | Manual Markdown records | Structured resumable transfer between runs | `HandoffStore` |
 | Events and schedules | None | PR, CI, issue, Slack, webhook, and timer triggers | `EventAdapter` |
 | Human intervention | Shell control only | Approve, pause, cancel, redirect, retry, and inspect | `ControlPlane` |

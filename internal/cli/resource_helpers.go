@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/chenhg5/harness-projects/internal/model"
 )
 
 func requiredResourceFlags(projectPath, id, title string) error {
@@ -13,6 +16,22 @@ func requiredResourceFlags(projectPath, id, title string) error {
 		return fmt.Errorf("--project, --id, and --title are required")
 	}
 	return nil
+}
+
+func parseKeyResults(value string) ([]model.KeyResult, error) {
+	if strings.TrimSpace(value) == "" {
+		return nil, nil
+	}
+	var results []model.KeyResult
+	if err := json.Unmarshal([]byte(value), &results); err != nil {
+		return nil, fmt.Errorf("invalid --key-results JSON: %w", err)
+	}
+	for _, result := range results {
+		if err := model.ValidateKeyResult(result); err != nil {
+			return nil, err
+		}
+	}
+	return results, nil
 }
 
 func requiredResourceLookup(projectPath, id string) error {

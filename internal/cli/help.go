@@ -20,6 +20,7 @@ Commands:
   handoff create|list|latest      Transfer work between agents
   worklog create|list|latest      Record and read agent work sessions
   cleanup plan|apply              Archive stale transient files safely
+  state get|update|validate       Inspect and update the project control snapshot
   coordinator plan                Plan currently dispatchable work
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
@@ -40,6 +41,7 @@ var groupHelp = map[string]string{
 	"handoff":     "Handoff commands: create, list, latest\nExample: hp handoff latest --project ./my-project\n",
 	"worklog":     "Work log commands: create, list, latest\nExample: hp worklog latest --project ./my-project\n",
 	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
+	"state":       "State commands: get, update, validate\nExample: hp state validate --project ./my-project\n",
 	"coordinator": "Coordinator commands: plan\nExample: hp coordinator plan --project ./my-project\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
 	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
@@ -69,8 +71,8 @@ var commandHelp = map[string]string{
   Read one project file.
   Example: hp file read --project ./checkout --section state --path current-plan.md --json
 `,
-	"goal create": `hp goal create --project <directory> --id <id> --title <title> [--status draft|active|completed|archived] [--acceptance a,b] [--dry-run]
-  Create a long-lived project goal.
+	"goal create": `hp goal create --project <directory> --id <id> --title <title> [--description <text>] [--outcome <text>] [--owner <id>] [--target-date <date>] [--key-results <json>] [--status draft|active|completed|archived] [--dry-run]
+	Create an outcome-oriented goal. Active goals require a description, outcome, and measurable key result; completed goals require achieved key results and evidence.
 `,
 	"goal list": `hp goal list --project <directory> [--status <status>] [--format json|text]
   List project goals.
@@ -78,11 +80,11 @@ var commandHelp = map[string]string{
 	"goal get": `hp goal get --project <directory> --id <id> [--format json|text]
   Read one goal.
 `,
-	"goal update": `hp goal update --project <directory> --id <id> [--title <title>] [--status <status>] [--dry-run]
+	"goal update": `hp goal update --project <directory> --id <id> [--title <title>] [--description <text>] [--outcome <text>] [--owner <id>] [--target-date <date>] [--key-results <json>] [--evidence a,b] [--status <status>] [--dry-run]
   Update selected goal fields.
 `,
-	"task create": `hp task create --project <directory> --id <id> --title <title> [--goal-id <id>] [--depends-on a,b] [--status pending|ready|blocked] [--dry-run]
-  Create a task and validate its dependency references.
+	"task create": `hp task create --project <directory> --id <id> --title <title> [--description <text>] [--deliverables a,b] [--acceptance a,b] [--priority critical|high|medium|low] [--owner <id>] [--due-date <date>] [--goal-id <id>] [--depends-on a,b] [--status pending|ready|blocked] [--dry-run]
+	Create an execution unit with deliverables, acceptance, ownership, and dependencies.
 `,
 	"task list": `hp task list --project <directory> [--status <status>] [--goal-id <id>] [--format json|text]
   List tasks.
@@ -90,13 +92,13 @@ var commandHelp = map[string]string{
 	"task get": `hp task get --project <directory> --id <id> [--format json|text]
   Read one task.
 `,
-	"task update": `hp task update --project <directory> --id <id> [--status <status>] [--depends-on a,b] [--dry-run]
+	"task update": `hp task update --project <directory> --id <id> [--status <status>] [--deliverables a,b] [--acceptance a,b] [--priority <priority>] [--owner <id>] [--blocked-reason <text>] [--result <text>] [--evidence a,b] [--verification a,b] [--dry-run]
   Update selected task fields.
 `,
 	"task ready": `hp task ready --project <directory> [--format json|text]
   Compute tasks whose dependencies are complete and which can be dispatched.
 `,
-	"run create": `hp run create --project <directory> --id <id> --task-id <id> [--adapter local] [--worktree <path>] [--dry-run]
+	"run create": `hp run create --project <directory> --id <id> --task-id <id> [--adapter local] [--harness <name>] [--agent-id <id>] [--objective <text>] [--command <command>] [--worktree <path>] [--dry-run]
   Record a planned execution attempt. It does not start a provider process.
 `,
 	"run list": `hp run list --project <directory> [--task-id <id>] [--status <status>] [--format json|text]
@@ -105,7 +107,7 @@ var commandHelp = map[string]string{
 	"run get": `hp run get --project <directory> --id <id> [--format json|text]
   Read one execution attempt.
 `,
-	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--error <message>] [--dry-run]
+	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--commit <sha>] [--changed-files a,b] [--verification a,b] [--logs a,b] [--error <message>] [--dry-run]
   Update run state and record timestamps for terminal states.
 `,
 	"repository add": `hp repository add --project <directory> --id <id> [--url <url>] [--path <local-git-repository>] [--default-branch <branch>] [--provider <name>] [--if-not-exists] [--dry-run]
@@ -168,6 +170,15 @@ var commandHelp = map[string]string{
 	"cleanup apply": `hp cleanup apply --project <directory> [--older-than 30d] [--sections worklogs,artifacts,context/imports] [--action archive|delete] [--force] [--dry-run]
   Archive stale files by default. Deletion requires --action delete and --force; dry runs exit 10.
 `,
+	"state get": `hp state get --project <directory> [--format json|text]
+  Read the structured project control snapshot.
+`,
+	"state validate": `hp state validate --project <directory> [--format json|text]
+  Validate that the state snapshot has an owner goal, health, progress, next actions, and source references.
+`,
+	"state update": `hp state update --project <directory> [--phase <phase>] [--health unknown|on_track|at_risk|blocked|complete] [--progress <summary>] [--current-goal-id <id>] [--active-tasks a,b] [--blocked-tasks a,b] [--next-actions a,b] [--risks a,b] [--last-verified-at <timestamp>] [--source-refs a,b] [--dry-run]
+  Update the materialized state snapshot after changing goals, tasks, runs, or verification evidence.
+`,
 	"schema list": `hp schema list [--format json|text]
   List introspectable CLI commands.
   Example: hp schema list --json
@@ -198,18 +209,18 @@ var commandSchemas = map[string]commandSchema{
 	"project validate": {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},
 	"file write":       {"file write", "Write a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"from", "string", true, nil}, {"replace", "boolean", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file write --project ./my-project --section spec --path requirements.md --from ./draft.md"}},
 	"file read":        {"file read", "Read a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file read --project ./my-project --section spec --path requirements.md --json"}},
-	"goal create":      {"goal create", "Create a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"description", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal create --project ./my-project --id modernize-api --title 'Modernize API'"}},
+	"goal create":      {"goal create", "Create an outcome-oriented project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"description", "string", false, nil}, {"outcome", "string", false, nil}, {"owner", "string", false, nil}, {"target-date", "string", false, nil}, {"review-cadence", "string", false, nil}, {"key-results", "json", false, nil}, {"evidence", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal create --project ./my-project --id modernize-api --title 'Modernize API' --description '...' --outcome '...' --key-results '[{\"id\":\"coverage\",\"metric\":\"test coverage\",\"direction\":\"increase\",\"target\":90,\"status\":\"planned\"}]'"}},
 	"goal list":        {"goal list", "List project goals", []flagSchema{{"project", "string", true, nil}, {"status", "enum", false, model.GoalStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal list --project ./my-project --json"}},
 	"goal get":         {"goal get", "Read a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal get --project ./my-project --id modernize-api --json"}},
-	"goal update":      {"goal update", "Update a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", false, nil}, {"description", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal update --project ./my-project --id modernize-api --status active"}},
-	"task create":      {"task create", "Create a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"goal-id", "string", false, nil}, {"depends-on", "string", false, nil}, {"agent-id", "string", false, nil}, {"status", "enum", false, model.TaskStatuses()}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task create --project ./my-project --id inventory-api --title 'Inventory API'"}},
+	"goal update":      {"goal update", "Update a project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", false, nil}, {"description", "string", false, nil}, {"outcome", "string", false, nil}, {"owner", "string", false, nil}, {"target-date", "string", false, nil}, {"review-cadence", "string", false, nil}, {"key-results", "json", false, nil}, {"evidence", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal update --project ./my-project --id modernize-api --status active"}},
+	"task create":      {"task create", "Create an execution task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"description", "string", false, nil}, {"deliverables", "string", false, nil}, {"acceptance", "string", false, nil}, {"priority", "enum", false, []string{"critical", "high", "medium", "low"}}, {"owner", "string", false, nil}, {"due-date", "string", false, nil}, {"goal-id", "string", false, nil}, {"depends-on", "string", false, nil}, {"agent-id", "string", false, nil}, {"status", "enum", false, model.TaskStatuses()}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task create --project ./my-project --id inventory-api --title 'Inventory API' --deliverables 'API endpoints' --acceptance 'integration tests'"}},
 	"task get":         {"task get", "Read a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task get --project ./my-project --id inventory-api --json"}},
-	"task update":      {"task update", "Update a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.TaskStatuses()}, {"depends-on", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task update --project ./my-project --id inventory-api --status completed"}},
+	"task update":      {"task update", "Update a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.TaskStatuses()}, {"deliverables", "string", false, nil}, {"acceptance", "string", false, nil}, {"priority", "enum", false, []string{"critical", "high", "medium", "low"}}, {"owner", "string", false, nil}, {"blocked-reason", "string", false, nil}, {"result", "string", false, nil}, {"evidence", "string", false, nil}, {"verification", "string", false, nil}, {"depends-on", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task update --project ./my-project --id inventory-api --status completed --evidence verification/2026-10-14.md"}},
 	"task ready":       {"task ready", "List dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task ready --project ./my-project --json"}},
-	"run create":       {"run create", "Create a planned execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"adapter", "string", false, nil}, {"worktree", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run create --project ./my-project --id run-001 --task-id inventory-api"}},
+	"run create":       {"run create", "Create a planned execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"adapter", "string", false, nil}, {"harness", "string", false, nil}, {"agent-id", "string", false, nil}, {"objective", "string", false, nil}, {"command", "string", false, nil}, {"worktree", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run create --project ./my-project --id run-001 --task-id inventory-api --objective 'Verify API'"}},
 	"run list":         {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
 	"run get":          {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
-	"run update":       {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
+	"run update":       {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"commit", "string", false, nil}, {"changed-files", "string", false, nil}, {"verification", "string", false, nil}, {"logs", "string", false, nil}, {"approval", "string", false, nil}, {"exit-code", "integer", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
 	"repository add":   {"repository add", "Register a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"url", "string", false, nil}, {"path", "string", false, nil}, {"default-branch", "string", false, nil}, {"provider", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository add --project ./my-project --id api --path ../api"}},
 	"repository list":  {"repository list", "List project repositories", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository list --project ./my-project --json"}},
 	"repository get":   {"repository get", "Read a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository get --project ./my-project --id api --json"}},
@@ -230,6 +241,9 @@ var commandSchemas = map[string]commandSchema{
 	"worklog latest":   {"worklog latest", "Read the latest agent work session", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worklog latest --project ./my-project --format text"}},
 	"cleanup plan":     {"cleanup plan", "Preview stale transient files", []flagSchema{{"project", "string", true, nil}, {"older-than", "duration", false, nil}, {"sections", "string", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp cleanup plan --project ./my-project --older-than 30d"}},
 	"cleanup apply":    {"cleanup apply", "Archive or delete stale transient files", []flagSchema{{"project", "string", true, nil}, {"older-than", "duration", false, nil}, {"sections", "string", false, nil}, {"action", "enum", false, []string{"archive", "delete"}}, {"force", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp cleanup apply --project ./my-project --older-than 30d"}},
+	"state get":        {"state get", "Read project state", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state get --project ./my-project"}},
+	"state validate":   {"state validate", "Validate project state", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state validate --project ./my-project"}},
+	"state update":     {"state update", "Update project state", []flagSchema{{"project", "string", true, nil}, {"phase", "string", false, nil}, {"health", "enum", false, []string{"unknown", "on_track", "at_risk", "blocked", "complete"}}, {"progress", "string", false, nil}, {"current-goal-id", "string", false, nil}, {"active-tasks", "string", false, nil}, {"blocked-tasks", "string", false, nil}, {"next-actions", "string", false, nil}, {"risks", "string", false, nil}, {"last-verified-at", "string", false, nil}, {"source-refs", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state update --project ./my-project --health on_track --progress '1/3 KRs achieved' --next-actions 'Verify projections' --source-refs state/project-state.json"}},
 	"schema list":      {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":       {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},
 }

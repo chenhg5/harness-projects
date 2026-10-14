@@ -13,8 +13,14 @@ func (a app) goalCreate(args []string) int {
 	id := fs.String("id", "", "goal id (required)")
 	title := fs.String("title", "", "goal title (required)")
 	description := fs.String("description", "", "goal description")
+	outcome := fs.String("outcome", "", "observable outcome")
+	owner := fs.String("owner", "", "goal owner")
+	targetDate := fs.String("target-date", "", "target date")
+	reviewCadence := fs.String("review-cadence", "", "review cadence")
 	status := fs.String("status", "draft", "draft|active|completed|archived")
 	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	keyResults := fs.String("key-results", "", "JSON array of measurable key results")
+	evidence := fs.String("evidence", "", "comma-separated evidence references")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	ifNotExists := fs.Bool("if-not-exists", false, "succeed if the goal already exists")
@@ -28,7 +34,15 @@ func (a app) goalCreate(args []string) int {
 	if err != nil {
 		return a.fail(failure{2, "invalid_arguments", err.Error(), "Use comma-separated non-empty values", "--acceptance"})
 	}
-	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: *id, Title: *title, Description: *description, Status: *status, Acceptance: criteria, CreatedAt: timestamp(), UpdatedAt: timestamp()}
+	results, err := parseKeyResults(*keyResults)
+	if err != nil {
+		return a.parseError(err)
+	}
+	evidenceRefs, err := commaList(*evidence)
+	if err != nil {
+		return a.parseError(err)
+	}
+	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: *id, Title: *title, Description: *description, Outcome: *outcome, Owner: *owner, TargetDate: *targetDate, ReviewCadence: *reviewCadence, Status: *status, Acceptance: criteria, KeyResults: results, Evidence: evidenceRefs, CreatedAt: timestamp(), UpdatedAt: timestamp()}
 	if err := model.ValidateGoal(goal); err != nil {
 		return a.operationError(err, *id)
 	}
@@ -120,8 +134,14 @@ func (a app) goalUpdate(args []string) int {
 	id := fs.String("id", "", "goal id (required)")
 	title := fs.String("title", "", "new title")
 	description := fs.String("description", "", "new description")
+	outcome := fs.String("outcome", "", "new observable outcome")
+	owner := fs.String("owner", "", "new goal owner")
+	targetDate := fs.String("target-date", "", "new target date")
+	reviewCadence := fs.String("review-cadence", "", "new review cadence")
 	status := fs.String("status", "", "draft|active|completed|archived")
 	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	keyResults := fs.String("key-results", "", "JSON array of measurable key results")
+	evidence := fs.String("evidence", "", "comma-separated evidence references")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	if err := parse(fs, args); err != nil {
@@ -144,6 +164,18 @@ func (a app) goalUpdate(args []string) int {
 	if flagSet(fs, "description") {
 		goal.Description = *description
 	}
+	if flagSet(fs, "outcome") {
+		goal.Outcome = *outcome
+	}
+	if flagSet(fs, "owner") {
+		goal.Owner = *owner
+	}
+	if flagSet(fs, "target-date") {
+		goal.TargetDate = *targetDate
+	}
+	if flagSet(fs, "review-cadence") {
+		goal.ReviewCadence = *reviewCadence
+	}
 	if flagSet(fs, "status") {
 		goal.Status = *status
 	}
@@ -151,6 +183,18 @@ func (a app) goalUpdate(args []string) int {
 		goal.Acceptance, err = commaList(*acceptance)
 		if err != nil {
 			return a.fail(failure{2, "invalid_arguments", err.Error(), "Use comma-separated non-empty values", "--acceptance"})
+		}
+	}
+	if flagSet(fs, "key-results") {
+		goal.KeyResults, err = parseKeyResults(*keyResults)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "evidence") {
+		goal.Evidence, err = commaList(*evidence)
+		if err != nil {
+			return a.parseError(err)
 		}
 	}
 	goal.UpdatedAt = timestamp()

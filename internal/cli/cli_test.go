@@ -55,7 +55,7 @@ func TestGoalTaskRunLifecycle(t *testing.T) {
 	if code, _, stderr := run(t, "project", "init", "--path", root); code != 0 {
 		t.Fatalf("init code=%d stderr=%s", code, stderr)
 	}
-	if code, _, stderr := run(t, "goal", "create", "--project", root, "--id", "modernize", "--title", "Modernize API", "--status", "active"); code != 0 {
+	if code, _, stderr := run(t, "goal", "create", "--project", root, "--id", "modernize", "--title", "Modernize API", "--description", "Reduce API failure rate with measurable delivery evidence.", "--outcome", "API releases meet the agreed reliability target.", "--key-results", `[{"id":"reliability","metric":"successful API requests","direction":"increase","target":99,"status":"planned"}]`, "--status", "active"); code != 0 {
 		t.Fatalf("goal create code=%d stderr=%s", code, stderr)
 	}
 	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "inventory", "--title", "Inventory API", "--goal-id", "modernize"); code != 0 {
@@ -79,7 +79,7 @@ func TestGoalTaskRunLifecycle(t *testing.T) {
 	if !ok || task["id"] != "inventory" {
 		t.Fatalf("unexpected ready task: %s", stdout)
 	}
-	if code, _, stderr := run(t, "task", "update", "--project", root, "--id", "inventory", "--status", "completed"); code != 0 {
+	if code, _, stderr := run(t, "task", "update", "--project", root, "--id", "inventory", "--status", "completed", "--result", "API implementation verified", "--evidence", "verification/api.md"); code != 0 {
 		t.Fatalf("task update code=%d stderr=%s", code, stderr)
 	}
 	if code, _, stderr := run(t, "run", "create", "--project", root, "--id", "run-1", "--task-id", "frontend"); code != 0 {

@@ -24,12 +24,17 @@ hp schema list --format json
 hp schema get --command "file write" --format json
 
 hp goal create --project ./my-project --id modernize-api \
-  --title "Modernize API" --status active
+  --title "Modernize API" --description "Reduce failed releases" \
+  --outcome "API releases meet the reliability target" \
+  --key-results '[{"id":"reliability","metric":"successful requests","direction":"increase","target":99,"status":"planned"}]' \
+  --status active
 hp task create --project ./my-project --id inventory-api \
-  --title "Inventory API" --goal-id modernize-api
+  --title "Inventory API" --goal-id modernize-api \
+  --deliverables "API endpoints" --acceptance "integration tests" --priority high
 hp task ready --project ./my-project --format json
 hp run create --project ./my-project --id run-001 --task-id inventory-api
 hp run update --project ./my-project --id run-001 --status running
+hp state validate --project ./my-project
 hp repository add --project ./my-project --id api --path ../api --default-branch main
 hp worktree create --project ./my-project --id api-task --repository-id api
 hp worktree list --project ./my-project --status active

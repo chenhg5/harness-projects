@@ -13,7 +13,11 @@ func (a app) runCreate(args []string) int {
 	id := fs.String("id", "", "run id (required)")
 	taskID := fs.String("task-id", "", "task id (required)")
 	adapter := fs.String("adapter", "local", "execution adapter name")
+	harness := fs.String("harness", "", "coding harness")
+	agentID := fs.String("agent-id", "", "agent identity")
+	objective := fs.String("objective", "", "run objective")
 	worktree := fs.String("worktree", "", "worktree path")
+	command := fs.String("command", "", "execution command")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	ifNotExists := fs.Bool("if-not-exists", false, "succeed if the run already exists")
@@ -30,7 +34,7 @@ func (a app) runCreate(args []string) int {
 	if _, err := s.Task(*taskID); err != nil {
 		return a.operationError(fmt.Errorf("task %q: %w", *taskID, err), *taskID)
 	}
-	run := model.Run{SchemaVersion: model.ResourceSchemaVersion, ID: *id, TaskID: *taskID, Adapter: *adapter, Status: "planned", Worktree: *worktree, CreatedAt: timestamp(), UpdatedAt: timestamp()}
+	run := model.Run{SchemaVersion: model.ResourceSchemaVersion, ID: *id, TaskID: *taskID, Adapter: *adapter, Harness: *harness, AgentID: *agentID, Objective: *objective, Status: "planned", Worktree: *worktree, Command: *command, CreatedAt: timestamp(), UpdatedAt: timestamp()}
 	if err := model.ValidateRun(run); err != nil {
 		return a.operationError(err, *id)
 	}
@@ -122,6 +126,16 @@ func (a app) runUpdate(args []string) int {
 	worktree := fs.String("worktree", "", "worktree path")
 	runError := fs.String("error", "", "failure or blocker description")
 	artifacts := fs.String("artifacts", "", "comma-separated artifact paths")
+	harness := fs.String("harness", "", "coding harness")
+	agentID := fs.String("agent-id", "", "agent identity")
+	objective := fs.String("objective", "", "run objective")
+	command := fs.String("command", "", "execution command")
+	commit := fs.String("commit", "", "resulting commit")
+	changedFiles := fs.String("changed-files", "", "comma-separated changed files")
+	verification := fs.String("verification", "", "comma-separated verification evidence")
+	logs := fs.String("logs", "", "comma-separated log or artifact references")
+	approval := fs.String("approval", "", "approval reference")
+	exitCode := fs.Int("exit-code", -1, "process exit code")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview changes without writing")
 	if err := parse(fs, args); err != nil {
@@ -159,6 +173,45 @@ func (a app) runUpdate(args []string) int {
 		if err != nil {
 			return a.fail(failure{2, "invalid_arguments", err.Error(), "Use comma-separated artifact paths", "--artifacts"})
 		}
+	}
+	if flagSet(fs, "harness") {
+		run.Harness = *harness
+	}
+	if flagSet(fs, "agent-id") {
+		run.AgentID = *agentID
+	}
+	if flagSet(fs, "objective") {
+		run.Objective = *objective
+	}
+	if flagSet(fs, "command") {
+		run.Command = *command
+	}
+	if flagSet(fs, "commit") {
+		run.Commit = *commit
+	}
+	if flagSet(fs, "changed-files") {
+		run.ChangedFiles, err = commaList(*changedFiles)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "verification") {
+		run.Verification, err = commaList(*verification)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "logs") {
+		run.Logs, err = commaList(*logs)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "approval") {
+		run.Approval = *approval
+	}
+	if flagSet(fs, "exit-code") {
+		run.ExitCode = exitCode
 	}
 	run.UpdatedAt = timestamp()
 	if err := model.ValidateRun(run); err != nil {

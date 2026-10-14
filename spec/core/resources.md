@@ -13,24 +13,41 @@ runs/<run-id>.json
 
 ## Goals
 
-A goal is a long-lived outcome. It MAY span multiple tasks and runs. Goal
-statuses are `draft`, `active`, `completed`, and `archived`.
+A goal is a long-lived outcome, equivalent to an Objective in an OKR system. It
+MAY span multiple tasks and runs. An active goal MUST have a description, an
+observable outcome, and at least one measurable key result. A key result MUST
+define a metric, direction, target, and status; it SHOULD include a baseline,
+current value, owner, due date, and evidence. Goal statuses are `draft`,
+`active`, `completed`, and `archived`. A goal MUST NOT become `completed` until
+every key result is `achieved` and the goal has evidence references.
 
 ## Tasks
 
-A task is a bounded unit of work. `dependsOn` contains task IDs that MUST be
-complete before the task is dispatchable. Task statuses are `pending`, `ready`,
-`in_progress`, `blocked`, `completed`, `failed`, and `cancelled`.
+A task is a bounded execution unit. It MUST describe its deliverables and
+acceptance criteria before it is dispatched in a production project.
+`dependsOn` contains task IDs that MUST be complete before the task is
+dispatchable. A blocked task MUST state why it is blocked. A completed task
+MUST include a result or evidence reference. Task statuses are `pending`,
+`ready`, `in_progress`, `blocked`, `completed`, `failed`, and `cancelled`.
 
 ## Runs
 
 A run is one execution attempt for one task. It records the execution adapter,
-worktree, status, timestamps, errors, artifacts, and verification references.
-Run statuses are `planned`, `running`, `succeeded`, `failed`, `paused`, and
-`cancelled`.
+harness and agent, objective, worktree, command, commit, changed files, status,
+timestamps, errors, artifacts, and verification references. A succeeded run
+MUST include verification evidence. Run statuses are `planned`, `running`,
+`succeeded`, `failed`, `paused`, and `cancelled`.
 
 The provider-neutral run ID remains stable even when a run is handed from one
 harness adapter to another.
+
+## State snapshot
+
+`state/project-state.json` is a materialized control-plane snapshot. It MUST
+identify the current phase, health, progress, next actions, and the source
+records from which it was derived. It is updated after meaningful goal, task,
+run, or verification changes. It is a navigation aid, not a replacement for
+the underlying records.
 
 ## Repositories and worktrees
 

@@ -15,11 +15,12 @@ verification, and harness adapters.
 
 ## Product goals
 
-- Define a long-lived project goal, constraints, instructions, and acceptance
-  criteria.
+- Define outcome-oriented goals with measurable key results, owners, dates, and
+  evidence-backed completion.
 - Coordinate dependent and parallel tasks through a shared task graph.
 - Run work through Claude Code, Cursor, Codex, and other execution backends.
-- Preserve project memory, decisions, research, plans, handoffs, and evidence.
+- Preserve project memory, decisions, research, plans, work logs, handoffs, and
+  inspectable evidence.
 - Isolate repository worktrees and execution environments for each run.
 - React to human requests, pull requests, CI results, issue events, and
   schedules.
@@ -49,7 +50,9 @@ Project
 └── Harness adapters
 ```
 
-The first release is local-first and file-based. The architecture leaves room
+The first release is local-first and file-based. Goals use an Objective plus
+measurable Key Results model; tasks and runs carry their own delivery and
+verification evidence. The architecture leaves room
 for remote runners and hosted event services without making them mandatory.
 
 ## Boundaries
@@ -115,7 +118,7 @@ goals, tasks, runs, portable memory records, and handoffs, compute a local
 Coordinator plan, register repositories, and create or remove local Git
 worktrees. The next runtime capabilities are:
 
-1. Project goals, instructions, memory, and acceptance criteria;
+1. Project goals, instructions, measurable key results, memory, and evidence;
 2. Repository clone, remote branch, and execution backend adapters;
 3. Harness session adapters for Claude Code, Cursor, Codex, and other providers;
 4. Coordinator scheduling, retries, approvals, and result aggregation;

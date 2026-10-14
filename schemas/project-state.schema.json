@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenhg5/harness-projects/schemas/project-state.schema.json",
+  "title": "Harness Project State Snapshot",
+  "type": "object",
+  "required": ["schemaVersion", "updatedAt", "currentPhase", "health", "progress", "nextActions", "sourceRefs"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "currentGoalId": { "type": "string" },
+    "currentPhase": { "type": "string", "minLength": 1 },
+    "health": { "enum": ["unknown", "on_track", "at_risk", "blocked", "complete"] },
+    "progress": { "type": "string", "minLength": 1 },
+    "activeTaskIds": { "type": "array", "items": { "type": "string" } },
+    "blockedTaskIds": { "type": "array", "items": { "type": "string" } },
+    "nextActions": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "lastVerifiedAt": { "type": "string", "format": "date-time" },
+    "sourceRefs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+  }
+}

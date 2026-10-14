@@ -28,7 +28,7 @@ func testStore(t *testing.T) Store {
 
 func TestResourcesRoundTrip(t *testing.T) {
 	s := testStore(t)
-	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: "goal", Title: "Goal", Status: "active", CreatedAt: "now", UpdatedAt: "now"}
+	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: "goal", Title: "Goal", Status: "draft", CreatedAt: "now", UpdatedAt: "now"}
 	if err := s.SaveGoal(goal, false); err != nil {
 		t.Fatal(err)
 	}

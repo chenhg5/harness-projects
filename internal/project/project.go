@@ -105,6 +105,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"repos/README.md":                        []byte("# Repositories\n\nPlace linked repository worktrees here. Record their purpose and branch in `PROJECT.md`.\n"),
 		"state/status.md":                        []byte("# Status\n\nProject created.\n"),
 		"state/current-plan.md":                  []byte("# Current plan\n\n1. Define the project goal and acceptance criteria in `PROJECT.md`.\n2. Add repository worktrees under `repos/`.\n3. Write the first task plan here.\n"),
+		"state/project-state.json":               []byte(fmt.Sprintf("{\n  \"schemaVersion\": \"1\",\n  \"updatedAt\": \"%s\",\n  \"currentPhase\": \"discovery\",\n  \"health\": \"unknown\",\n  \"progress\": \"0%%\",\n  \"nextActions\": [\"Define the first goal and key results\"],\n  \"sourceRefs\": [\"PROJECT.md\"]\n}\n", now.UTC().Format(time.RFC3339))),
 		"artifacts/README.md":                    []byte("# Artifacts\n\nStore generated project outputs that are not part of a source repository here.\n"),
 		"integrations/README.md":                 []byte("# Integrations\n\nRecord provider, repository, event, and runner adapter configuration here.\n"),
 		".harness-project/project.json":          append(manifest, '\n'),
@@ -133,7 +134,7 @@ var fileOrder = []string{
 	"tasks/README.md", "runs/README.md", "agents/README.md", "context/README.md",
 	"handoffs/README.md", "events/README.md", "verification/README.md", "worklogs/README.md", "archive/README.md",
 	"skills/shared/project-context/SKILL.md", "scripts/shared/README.md", "repos/README.md",
-	"state/status.md", "state/current-plan.md", "artifacts/README.md", "integrations/README.md",
+	"state/status.md", "state/current-plan.md", "state/project-state.json", "artifacts/README.md", "integrations/README.md",
 	".harness-project/project.json", ".cursor/rules/harness-project.mdc",
 }
 
