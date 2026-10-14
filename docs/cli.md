@@ -16,6 +16,7 @@ go build -o ./bin/hp ./cmd/hp
 hp project init --path ./my-project --name "My Project"
 hp project status --path ./my-project --format json
 hp project validate --path ./my-project --format json
+hp project serve --path ./my-project --open
 hp file write --project ./my-project --section spec \
   --path architecture/api.md --from ./api.md --dry-run
 hp file read --project ./my-project --section state \
@@ -65,3 +66,13 @@ transfers and may include branch, commit, and blocker details. Cleanup only
 selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
 the default action archives them under `archive/` and never selects durable
 project history.
+
+## Local dashboard
+
+`hp project serve --path ./my-project --open` starts a local, read-only Web
+dashboard. The server listens on `127.0.0.1` and chooses a free port unless
+`--port` is provided. It prints its URL on startup; stop it with Ctrl-C. The
+page refreshes every 20 seconds and `GET /api/project` returns the same project
+summary as JSON. The dashboard reads the project files again for each request.
+Task percentages count completed tasks; they do not change goal status or claim
+that a goal's acceptance conditions have been met.

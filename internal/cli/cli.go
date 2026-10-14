@@ -71,6 +71,8 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.projectStatus(args[2:], false)
 	case "project validate":
 		return a.projectStatus(args[2:], true)
+	case "project serve":
+		return a.projectServe(args[2:])
 	case "file write":
 		return a.fileWrite(args[2:])
 	case "file read":

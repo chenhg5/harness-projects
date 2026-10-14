@@ -10,7 +10,7 @@ Examples:
   hp file write --project ./my-project --section spec --path architecture.md --from ./draft.md --dry-run
 
 Commands:
-  project init|status|validate    Create and inspect Harness Projects
+  project init|status|validate|serve Create, inspect, and view Harness Projects
   goal create|list|get|update     Manage long-lived project goals
   task create|list|get|update|ready Manage dependent work items
   run create|list|get|update      Manage execution attempts
@@ -31,7 +31,7 @@ Exit codes: 0 success, 1 operation/validation error, 2 usage, 3 not found,
 `
 
 var groupHelp = map[string]string{
-	"project":     "Project commands: init, status, validate\nExample: hp project init --path ./my-project\n",
+	"project":     "Project commands: init, status, validate, serve\nExample: hp project serve --path ./my-project --open\n",
 	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
 	"task":        "Task commands: create, list, get, update, ready\nExample: hp task ready --project ./my-project\n",
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
@@ -60,6 +60,10 @@ var commandHelp = map[string]string{
 	"project validate": `hp project validate --path <directory> [--format json|text]
   Validate project structure. Exits 1 if invalid.
   Example: hp project validate --path ./checkout --json
+`,
+	"project serve": `hp project serve --path <directory> [--port 0..65535] [--open] [--format json|text]
+  Serve a read-only local dashboard with goals, task progress, state, repositories, and recent agent activity. Binds to 127.0.0.1 only. Press Ctrl-C to stop.
+  Example: hp project serve --path ./checkout --open
 `,
 	"file write": `hp file write --project <directory> --section <section> --path <relative-path> --from <file|-> [--replace|--if-not-exists] [--dry-run] [--format json|text]
   Write a text file under a canonical project section: spec, goals, tasks, runs, agents, context, handoffs, events, verification, skills, scripts, state, artifacts, or integrations.
@@ -207,6 +211,7 @@ var commandSchemas = map[string]commandSchema{
 	"project init":     {"project init", "Create a Harness Project", []flagSchema{{"path", "string", true, nil}, {"name", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project init --path ./my-project --dry-run"}},
 	"project status":   {"project status", "Inspect a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project status --path ./my-project --json"}},
 	"project validate": {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},
+	"project serve":    {"project serve", "Serve a read-only local project dashboard", []flagSchema{{"path", "string", true, nil}, {"port", "integer", false, nil}, {"open", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project serve --path ./my-project --open"}},
 	"file write":       {"file write", "Write a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"from", "string", true, nil}, {"replace", "boolean", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file write --project ./my-project --section spec --path requirements.md --from ./draft.md"}},
 	"file read":        {"file read", "Read a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file read --project ./my-project --section spec --path requirements.md --json"}},
 	"goal create":      {"goal create", "Create an outcome-oriented project goal", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"title", "string", true, nil}, {"description", "string", false, nil}, {"outcome", "string", false, nil}, {"method", "enum", false, []string{"okr", "milestone", "experiment", "metric", "custom", "none"}}, {"done-when", "string", false, nil}, {"evidence-required", "string", false, nil}, {"owner", "string", false, nil}, {"target-date", "string", false, nil}, {"review-cadence", "string", false, nil}, {"key-results", "json", false, nil}, {"evidence", "string", false, nil}, {"status", "enum", false, model.GoalStatuses()}, {"acceptance", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp goal create --project ./my-project --id modernize-api --title 'Modernize API' --description '...' --outcome '...' --key-results '[{\"id\":\"coverage\",\"metric\":\"test coverage\",\"direction\":\"increase\",\"target\":90,\"status\":\"planned\"}]'"}},

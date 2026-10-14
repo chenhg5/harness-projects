@@ -143,7 +143,12 @@ go build -o ./bin/hp ./cmd/hp
   --remaining 'Add review' --next 'Run tests'
 ./bin/hp cleanup plan --project ./my-project --older-than 30d
 ./bin/hp state validate --project ./my-project
+./bin/hp project serve --path ./my-project --open
 ```
+
+`hp project serve` opens a local, read-only dashboard for goals, task progress,
+project state, repositories, and recent agent activity. See
+[docs/dashboard.md](docs/dashboard.md) for details.
 
 See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract. Active goals require a description, outcome, and `doneWhen` conditions; completed goals require inspectable evidence. OKR is optional.
 
