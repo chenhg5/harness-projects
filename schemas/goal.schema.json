@@ -40,5 +40,15 @@
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" }
   },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["active", "completed"]}}},
+      "then": {"required": ["description", "outcome", "keyResults"]}
+    },
+    {
+      "if": {"properties": {"status": {"const": "completed"}}},
+      "then": {"required": ["evidence"]}
+    }
+  ],
   "additionalProperties": true
 }

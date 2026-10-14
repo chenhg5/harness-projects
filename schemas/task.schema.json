@@ -20,11 +20,21 @@
     "dependsOn": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "agentId": { "type": "string" },
     "blockedReason": { "type": "string" },
-    "result": { "type": "string" },
-    "evidence": { "type": "array", "items": { "type": "string" } },
+    "result": { "type": "string", "minLength": 1 },
+    "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
     "verification": { "type": "array", "items": { "type": "string" } },
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" }
   },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "blocked"}}},
+      "then": {"required": ["blockedReason"]}
+    },
+    {
+      "if": {"properties": {"status": {"const": "completed"}}},
+      "then": {"anyOf": [{"required": ["result"]}, {"required": ["evidence"]}]}
+    }
+  ],
   "additionalProperties": true
 }
