@@ -17,6 +17,7 @@ a claim that every feature is implemented today.
 | Repository isolation | Repository registration and local Git worktree lifecycle | Clone, remote branch, worktree, environment mapping | `RepositoryAdapter` |
 | Verification | Run/task evidence fields and project state validation | Tests, CI, review, acceptance gates, evidence aggregation | `Verifier` |
 | Handoffs | Manual Markdown records | Structured resumable transfer between runs | `HandoffStore` |
+| State snapshot | Structured state with source references and CLI validation | Derived control-plane state, freshness, health, and risk rollups | `StateStore` |
 | Events and schedules | None | PR, CI, issue, Slack, webhook, and timer triggers | `EventAdapter` |
 | Human intervention | Shell control only | Approve, pause, cancel, redirect, retry, and inspect | `ControlPlane` |
 | Remote execution | None | Local, cloud, and self-hosted runners | `RunnerAdapter` |

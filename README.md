@@ -140,9 +140,10 @@ go build -o ./bin/hp ./cmd/hp
   --objective 'Implement a feature' --completed 'Added the code' \
   --remaining 'Add review' --next 'Run tests'
 ./bin/hp cleanup plan --project ./my-project --older-than 30d
+./bin/hp state validate --project ./my-project
 ```
 
-See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract.
+See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract. Active goals use measurable Key Results; completion is rejected without evidence.
 
 ## Contributing
 
