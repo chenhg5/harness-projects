@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harness-projects.dev/schemas/worklog.schema.json",
+  "title": "Harness Project Work Log",
+  "type": "object",
+  "required": ["id", "agent", "createdAt", "objective", "completed", "remaining", "next"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+    "agent": {"type": "string", "minLength": 1},
+    "harness": {"type": "string"},
+    "taskId": {"type": "string"},
+    "runId": {"type": "string"},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "objective": {"type": "string", "minLength": 1},
+    "completed": {"type": "string", "minLength": 1},
+    "remaining": {"type": "string", "minLength": 1},
+    "changes": {"type": "string"},
+    "verification": {"type": "string"},
+    "next": {"type": "string", "minLength": 1},
+    "blockers": {"type": "string"}
+  }
+}

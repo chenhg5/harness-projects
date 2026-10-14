@@ -13,6 +13,8 @@ Planned areas:
 - `core/` — project concepts and lifecycle;
 - `project-manifest/` — machine-readable project metadata;
 - `handoff/` — durable agent-to-agent handoffs;
+- `worklog/` — chronological agent session records;
+- `lifecycle/` — retention, archival, and cleanup rules;
 - `skill-mounts/` — shared and harness-specific skill discovery.
 
 Harness integration requirements live under `../adapters/`.

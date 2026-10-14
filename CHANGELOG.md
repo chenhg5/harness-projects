@@ -17,3 +17,7 @@ All notable changes to Harness Projects will be documented here.
   schemas and agent-friendly CLI commands.
 - Added the first local Coordinator plan that separates dispatchable tasks from
   tasks waiting on dependencies.
+- Added portable work logs for every agent session, distinct from handoffs.
+- Added bounded project cleanup with safe archival and explicit forced deletion.
+- Added the cross-harness `harness-projects` skill plus release installation,
+  multi-platform Makefile archives, checksum generation, and `INSTALL.md`.

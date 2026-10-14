@@ -41,9 +41,21 @@ hp handoff create --project ./my-project --id api-work \
   --from codex --to claude --objective "Build API" \
   --completed "Added routes" --next "Add tests"
 hp handoff latest --project ./my-project --format text
+hp worklog create --project ./my-project --id session-001 --agent codex \
+  --objective "Implement memory" --completed "Added search" \
+  --remaining "Add docs" --verification "go test ./..." --next "Review"
+hp worklog latest --project ./my-project --format text
+hp cleanup plan --project ./my-project --older-than 30d
+hp cleanup apply --project ./my-project --older-than 30d
 hp coordinator plan --project ./my-project --format json
 ```
 
 Commands that write files support `--dry-run`. A successful dry run exits with
 code `10`. Non-TTY output defaults to JSON. JSON data goes to stdout and
 machine-readable errors go to stderr.
+
+Work logs are chronological session records. Handoffs are responsibility
+transfers and may include branch, commit, and blocker details. Cleanup only
+selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
+the default action archives them under `archive/` and never selects durable
+project history.

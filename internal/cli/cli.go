@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const Version = "0.1.0-dev"
+var Version = "v0.0.1-dev"
 
 type app struct {
 	in  io.Reader
@@ -129,6 +129,16 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.handoffList(args[2:])
 	case "handoff latest":
 		return a.handoffLatest(args[2:])
+	case "worklog create":
+		return a.worklogCreate(args[2:])
+	case "worklog list":
+		return a.worklogList(args[2:])
+	case "worklog latest":
+		return a.worklogLatest(args[2:])
+	case "cleanup plan":
+		return a.cleanupPlan(args[2:])
+	case "cleanup apply":
+		return a.cleanupApply(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
 	case "schema list":

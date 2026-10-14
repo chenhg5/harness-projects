@@ -76,6 +76,8 @@ my-project/
 ├── agents/
 ├── context/
 ├── handoffs/
+├── worklogs/
+├── archive/
 ├── events/
 ├── verification/
 ├── skills/
@@ -131,9 +133,13 @@ The reference CLI is written in Go and is called `hp`:
 go build -o ./bin/hp ./cmd/hp
 ./bin/hp project init --path ./my-project --name "My Project"
 ./bin/hp project validate --path ./my-project --format json
+./bin/hp worklog create --project ./my-project --id session-001 --agent codex \
+  --objective 'Implement a feature' --completed 'Added the code' \
+  --remaining 'Add review' --next 'Run tests'
+./bin/hp cleanup plan --project ./my-project --older-than 30d
 ```
 
-See [docs/cli.md](docs/cli.md) for the command contract.
+See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract.
 
 ## Contributing
 

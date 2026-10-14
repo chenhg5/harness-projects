@@ -42,7 +42,7 @@ type Status struct {
 
 var directories = []string{
 	"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events",
-	"verification", "skills/shared/project-context", "scripts/shared", "repos",
+	"verification", "worklogs", "archive", "skills/shared/project-context", "scripts/shared", "repos",
 	"state", "artifacts", "integrations", ".harness-project", ".codex/skills",
 	".claude/skills", ".cursor/rules",
 }
@@ -86,8 +86,8 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		return InitResult{}, nil, err
 	}
 	files := map[string][]byte{
-		"PROJECT.md":                             []byte("# " + name + "\n\nDescribe the project goal, scope, constraints, and participating repositories here.\n\n## Current work\n\nRead `state/current-plan.md`, the active goal in `goals/`, and the latest handoff in `handoffs/`.\n"),
-		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project. Read `PROJECT.md`, `.harness-project/project.json`, `goals/`, `state/current-plan.md`, and the latest handoff before changing code. Project specifications live in `spec/`. Tasks and runs live in `tasks/` and `runs/`. Code repositories live in `repos/`. Record durable decisions in `spec/` and write a new handoff when transferring work.\n"),
+		"PROJECT.md":                             []byte("# " + name + "\n\nDescribe the project goal, scope, constraints, and participating repositories here.\n\n## Current work\n\nRead `state/current-plan.md`, the active goal in `goals/`, the latest work log in `worklogs/`, and the latest handoff in `handoffs/`.\n"),
+		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project. Read `PROJECT.md`, `.harness-project/project.json`, `goals/`, `state/current-plan.md`, and the latest work log before changing code. Read the latest handoff when responsibility moves between agents. Project specifications live in `spec/`. Tasks and runs live in `tasks/` and `runs/`. Code repositories live in `repos/` and keep their own Git history. Record durable decisions in `spec/`, write a work log after each meaningful session, and write a handoff when transferring work. Use `hp cleanup plan` to keep transient files bounded.\n"),
 		"CLAUDE.md":                              []byte("# Claude Code project instructions\n\nFollow `AGENTS.md` and read `PROJECT.md` for the shared project context. The canonical project files are outside `.claude/`.\n"),
 		"spec/README.md":                         []byte("# Project specifications\n\nKeep the current requirements, architecture, interfaces, and decisions here. Use separate files for separate concerns.\n"),
 		"goals/README.md":                        []byte("# Goals\n\nRecord long-lived project outcomes, constraints, and acceptance criteria here. A goal may span many tasks and runs.\n"),
@@ -98,7 +98,9 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"handoffs/README.md":                     []byte("# Handoffs\n\nAdd one dated Markdown file per handoff. Include the goal, completed work, next actions, repository branches and commits, verification, and blockers. Do not overwrite previous handoffs.\n"),
 		"events/README.md":                       []byte("# Events\n\nRecord incoming events and trigger definitions here. Event processing must be idempotent.\n"),
 		"verification/README.md":                 []byte("# Verification\n\nRecord acceptance checks, test runs, review results, and evidence for project outputs here.\n"),
-		"skills/shared/project-context/SKILL.md": []byte("---\nname: project-context\ndescription: Read the portable context of a Harness Project before work and record a handoff when transferring it.\n---\n\n# Project context\n\n1. Read `PROJECT.md` and `.harness-project/project.json`.\n2. Read `state/current-plan.md`, relevant files in `spec/`, and the latest handoff.\n3. Inspect each relevant repository in `repos/` before editing.\n4. Update the plan and append a handoff when transferring work.\n"),
+		"worklogs/README.md":                     []byte("# Work logs\n\nAdd one dated Markdown file after each meaningful agent work session. Record the objective, completed work, remaining work, verification, and next action. Work logs are chronological activity records; use `handoffs/` when responsibility moves between agents or harnesses.\n"),
+		"archive/README.md":                      []byte("# Archive\n\n`hp cleanup` moves stale transient files here before removal from active project folders. Keep archived material only when it may help audit or recovery; do not archive goals, specifications, task records, or handoffs automatically.\n"),
+		"skills/shared/project-context/SKILL.md": []byte("---\nname: project-context\ndescription: Read the portable context of a Harness Project before work and record a work log after each session.\n---\n\n# Project context\n\n1. Read `PROJECT.md` and `.harness-project/project.json`.\n2. Read `state/current-plan.md`, relevant files in `spec/`, the latest work log, and the latest handoff when present.\n3. Inspect each relevant repository in `repos/` before editing.\n4. Write a work log with objective, completed work, remaining work, verification, and next action. Write a handoff when transferring responsibility.\n5. Use `hp cleanup plan` periodically to archive stale transient files.\n"),
 		"scripts/shared/README.md":               []byte("# Shared scripts\n\nPut project-wide scripts here. Keep repository-specific scripts in their repositories.\n"),
 		"repos/README.md":                        []byte("# Repositories\n\nPlace linked repository worktrees here. Record their purpose and branch in `PROJECT.md`.\n"),
 		"state/status.md":                        []byte("# Status\n\nProject created.\n"),
@@ -129,7 +131,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 var fileOrder = []string{
 	"PROJECT.md", "AGENTS.md", "CLAUDE.md", "spec/README.md", "goals/README.md",
 	"tasks/README.md", "runs/README.md", "agents/README.md", "context/README.md",
-	"handoffs/README.md", "events/README.md", "verification/README.md",
+	"handoffs/README.md", "events/README.md", "verification/README.md", "worklogs/README.md", "archive/README.md",
 	"skills/shared/project-context/SKILL.md", "scripts/shared/README.md", "repos/README.md",
 	"state/status.md", "state/current-plan.md", "artifacts/README.md", "integrations/README.md",
 	".harness-project/project.json", ".cursor/rules/harness-project.mdc",

@@ -18,6 +18,8 @@ Commands:
   worktree create|list|get|remove Manage isolated Git worktrees
   context add|list|get|search     Manage portable project memory
   handoff create|list|latest      Transfer work between agents
+  worklog create|list|latest      Record and read agent work sessions
+  cleanup plan|apply              Archive stale transient files safely
   coordinator plan                Plan currently dispatchable work
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
@@ -36,6 +38,8 @@ var groupHelp = map[string]string{
 	"worktree":    "Worktree commands: create, list, get, remove\nExample: hp worktree create --project ./my-project --id api-task --repository-id api\n",
 	"context":     "Context commands: add, list, get, search\nExample: hp context search --project ./my-project --query architecture\n",
 	"handoff":     "Handoff commands: create, list, latest\nExample: hp handoff latest --project ./my-project\n",
+	"worklog":     "Work log commands: create, list, latest\nExample: hp worklog latest --project ./my-project\n",
+	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
 	"coordinator": "Coordinator commands: plan\nExample: hp coordinator plan --project ./my-project\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
 	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
@@ -149,6 +153,21 @@ var commandHelp = map[string]string{
 	"handoff latest": `hp handoff latest --project <directory> [--format json|text]
   Read the latest handoff file.
 `,
+	"worklog create": `hp worklog create --project <directory> --id <id> --agent <agent> --objective <text> --completed <text> --remaining <text> --next <text> [--harness <name>] [--task-id <id>] [--run-id <id>] [--changes <text>] [--verification <text>] [--blockers <text>] [--dry-run]
+  Record one agent session. Create this after each meaningful session; use handoff when responsibility moves between agents.
+`,
+	"worklog list": `hp worklog list --project <directory> [--format json|text]
+  List work logs in chronological filename order.
+`,
+	"worklog latest": `hp worklog latest --project <directory> [--format json|text]
+  Read the latest work log.
+`,
+	"cleanup plan": `hp cleanup plan --project <directory> [--older-than 30d] [--sections worklogs,artifacts,context/imports] [--format json|text]
+  Preview stale transient files eligible for archival. Durable goals, specs, tasks, runs, and handoffs are never selected.
+`,
+	"cleanup apply": `hp cleanup apply --project <directory> [--older-than 30d] [--sections worklogs,artifacts,context/imports] [--action archive|delete] [--force] [--dry-run]
+  Archive stale files by default. Deletion requires --action delete and --force; dry runs exit 10.
+`,
 	"schema list": `hp schema list [--format json|text]
   List introspectable CLI commands.
   Example: hp schema list --json
@@ -206,6 +225,11 @@ var commandSchemas = map[string]commandSchema{
 	"handoff create":   {"handoff create", "Append a durable handoff", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"from", "string", true, nil}, {"to", "string", true, nil}, {"objective", "string", true, nil}, {"completed", "string", true, nil}, {"next", "string", true, nil}, {"repositories", "string", false, nil}, {"verification", "string", false, nil}, {"blockers", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff create --project ./my-project --id api-work --from codex --to claude --objective 'Build API' --completed 'Added routes' --next 'Add tests'"}},
 	"handoff list":     {"handoff list", "List project handoffs", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff list --project ./my-project"}},
 	"handoff latest":   {"handoff latest", "Read the latest project handoff", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff latest --project ./my-project --format text"}},
+	"worklog create":   {"worklog create", "Record an agent work session", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"agent", "string", true, nil}, {"harness", "string", false, nil}, {"task-id", "string", false, nil}, {"run-id", "string", false, nil}, {"objective", "string", true, nil}, {"completed", "string", true, nil}, {"remaining", "string", true, nil}, {"changes", "string", false, nil}, {"verification", "string", false, nil}, {"next", "string", true, nil}, {"blockers", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worklog create --project ./my-project --id session-001 --agent codex --objective 'Implement memory' --completed 'Added search' --remaining 'Add docs' --next 'Run tests'"}},
+	"worklog list":     {"worklog list", "List agent work sessions", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worklog list --project ./my-project"}},
+	"worklog latest":   {"worklog latest", "Read the latest agent work session", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worklog latest --project ./my-project --format text"}},
+	"cleanup plan":     {"cleanup plan", "Preview stale transient files", []flagSchema{{"project", "string", true, nil}, {"older-than", "duration", false, nil}, {"sections", "string", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp cleanup plan --project ./my-project --older-than 30d"}},
+	"cleanup apply":    {"cleanup apply", "Archive or delete stale transient files", []flagSchema{{"project", "string", true, nil}, {"older-than", "duration", false, nil}, {"sections", "string", false, nil}, {"action", "enum", false, []string{"archive", "delete"}}, {"force", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp cleanup apply --project ./my-project --older-than 30d"}},
 	"schema list":      {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":       {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},
 }

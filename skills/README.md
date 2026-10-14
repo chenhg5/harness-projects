@@ -10,3 +10,9 @@ skills/
 ├── claude-code/  Claude Code-specific skills
 └── cursor/       Cursor-specific skills
 ```
+# Skills
+
+Portable and harness-specific instructions that help agents use Harness Projects.
+
+- [`harness-projects/SKILL.md`](harness-projects/SKILL.md): shared workflow for Claude Code, Cursor, Codex, and other harnesses.
+- Generated projects also mount a small project-context skill through `.codex/skills/` and `.claude/skills/`.

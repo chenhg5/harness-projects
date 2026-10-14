@@ -17,7 +17,7 @@ const MaxContentBytes = 4 << 20
 
 var allowedSections = map[string]bool{
 	"spec": true, "goals": true, "tasks": true, "runs": true, "agents": true,
-	"context": true, "handoffs": true, "events": true, "verification": true,
+	"context": true, "handoffs": true, "events": true, "verification": true, "worklogs": true, "archive": true,
 	"skills": true, "scripts": true, "state": true, "artifacts": true,
 	"integrations": true,
 }
