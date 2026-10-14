@@ -25,6 +25,13 @@ where an Agent can learn what a goal or task means. A JSON index MAY contain an
 optional method projection such as OKR key results, but the core protocol does
 not require a particular management method.
 
+The v1 reference CLI keeps JSON resource files as its CRUD compatibility layer
+and does not silently parse arbitrary Markdown edits. When a project keeps both
+forms for the same resource, the project MUST either update them together or
+declare which one is authoritative in the document frontmatter. A future
+two-way projection command can remove that manual synchronization step without
+changing the portable file contract.
+
 ## Goal contract
 
 Every active goal MUST state an outcome and one or more `doneWhen` conditions.
