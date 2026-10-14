@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenhg5/harness-projects/schemas/memory.schema.json",
+  "title": "Harness Project Memory",
+  "type": "object",
+  "required": ["schemaVersion", "id", "kind", "title", "content", "createdAt", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "kind": { "enum": ["decision", "lesson", "preference", "research"] },
+    "title": { "type": "string", "minLength": 1 },
+    "content": { "type": "string", "minLength": 1 },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "source": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

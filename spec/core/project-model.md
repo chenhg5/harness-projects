@@ -22,6 +22,7 @@ tasks/
 runs/
 agents/
 context/
+context/memory/
 handoffs/
 events/
 verification/
@@ -36,6 +37,8 @@ integrations/
 
 `PROJECT.md` is the human-readable entry point. `.harness-project/` contains
 machine-readable metadata. Harness-specific files are generated views.
+
+Portable project memory MUST be stored under `context/memory/` as one record per file. Memory records MUST include a kind, title, content, timestamps, and a stable ID. Supported kinds are `decision`, `lesson`, `preference`, and `research`. Harness-specific automatic memories MAY be imported into `context/imports/`, but they MUST NOT be the only copy of durable project knowledge.
 
 ## Source of truth
 

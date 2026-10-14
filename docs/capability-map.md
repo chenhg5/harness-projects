@@ -7,7 +7,7 @@ a claim that every feature is implemented today.
 | Capability | Current `hp` | Target in Harness Projects | Provider-neutral abstraction |
 | --- | --- | --- | --- |
 | Long-lived project goal | Goal JSON resources and project files | Goal, constraints, acceptance criteria, instructions | `Project` and `Goal` |
-| Shared project context | Markdown files | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
+| Shared project context | Context files, searchable memory records, and handoffs | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
 | Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
 | Coordinator | Local readiness plan | Plan, route, observe, aggregate, replan | `Coordinator` |
 | Execution sessions | Run JSON resources | Resumable runs and provider threads | `Run` and `Thread` |

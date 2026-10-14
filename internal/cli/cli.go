@@ -115,6 +115,20 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.worktreeGet(args[2:])
 	case "worktree remove":
 		return a.worktreeRemove(args[2:])
+	case "context add":
+		return a.contextAdd(args[2:])
+	case "context list":
+		return a.contextList(args[2:])
+	case "context get":
+		return a.contextGet(args[2:])
+	case "context search":
+		return a.contextSearch(args[2:])
+	case "handoff create":
+		return a.handoffCreate(args[2:])
+	case "handoff list":
+		return a.handoffList(args[2:])
+	case "handoff latest":
+		return a.handoffLatest(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
 	case "schema list":

@@ -16,6 +16,8 @@ Commands:
   run create|list|get|update      Manage execution attempts
   repository add|list|get         Register participating code repositories
   worktree create|list|get|remove Manage isolated Git worktrees
+  context add|list|get|search     Manage portable project memory
+  handoff create|list|latest      Transfer work between agents
   coordinator plan                Plan currently dispatchable work
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
@@ -32,6 +34,8 @@ var groupHelp = map[string]string{
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
 	"repository":  "Repository commands: add, list, get\nExample: hp repository add --project ./my-project --id api --path ../api\n",
 	"worktree":    "Worktree commands: create, list, get, remove\nExample: hp worktree create --project ./my-project --id api-task --repository-id api\n",
+	"context":     "Context commands: add, list, get, search\nExample: hp context search --project ./my-project --query architecture\n",
+	"handoff":     "Handoff commands: create, list, latest\nExample: hp handoff latest --project ./my-project\n",
 	"coordinator": "Coordinator commands: plan\nExample: hp coordinator plan --project ./my-project\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
 	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
@@ -124,6 +128,27 @@ var commandHelp = map[string]string{
 	"coordinator plan": `hp coordinator plan --project <directory> [--format json|text]
   Compute dispatchable and waiting tasks without starting an Agent.
 `,
+	"context add": `hp context add --project <directory> --id <id> --kind decision|lesson|preference|research --title <title> --from <file|-> [--tags a,b] [--source <reference>] [--dry-run]
+  Store one portable project memory record under context/memory/.
+`,
+	"context list": `hp context list --project <directory> [--kind <kind>] [--format json|text]
+  List project memory records.
+`,
+	"context get": `hp context get --project <directory> --kind <kind> --id <id> [--format json|text]
+  Read one project memory record.
+`,
+	"context search": `hp context search --project <directory> --query <terms> [--kind <kind>] [--format json|text]
+  Search title, tags, content, and source; all query terms must match.
+`,
+	"handoff create": `hp handoff create --project <directory> --id <id> --from <agent> --to <agent> --objective <text> --completed <text> --next <text> [--repositories <text>] [--verification <text>] [--blockers <text>] [--dry-run]
+  Append one durable Markdown handoff.
+`,
+	"handoff list": `hp handoff list --project <directory> [--format json|text]
+  List handoff files in chronological filename order.
+`,
+	"handoff latest": `hp handoff latest --project <directory> [--format json|text]
+  Read the latest handoff file.
+`,
 	"schema list": `hp schema list [--format json|text]
   List introspectable CLI commands.
   Example: hp schema list --json
@@ -174,6 +199,13 @@ var commandSchemas = map[string]commandSchema{
 	"worktree get":     {"worktree get", "Read a project worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree get --project ./my-project --id api-task --json"}},
 	"worktree remove":  {"worktree remove", "Remove a Git worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"force", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree remove --project ./my-project --id api-task --force"}},
 	"coordinator plan": {"coordinator plan", "Compute dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator plan --project ./my-project --json"}},
+	"context add":      {"context add", "Store a portable project memory", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"kind", "enum", true, model.MemoryKinds()}, {"title", "string", true, nil}, {"from", "string", true, nil}, {"tags", "string", false, nil}, {"source", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context add --project ./my-project --id api-decision --kind decision --title 'API design' --from ./decision.md"}},
+	"context list":     {"context list", "List project memories", []flagSchema{{"project", "string", true, nil}, {"kind", "enum", false, model.MemoryKinds()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context list --project ./my-project --json"}},
+	"context get":      {"context get", "Read one project memory", []flagSchema{{"project", "string", true, nil}, {"kind", "enum", true, model.MemoryKinds()}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context get --project ./my-project --kind decision --id api-decision"}},
+	"context search":   {"context search", "Search project memories", []flagSchema{{"project", "string", true, nil}, {"query", "string", true, nil}, {"kind", "enum", false, model.MemoryKinds()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context search --project ./my-project --query 'API design'"}},
+	"handoff create":   {"handoff create", "Append a durable handoff", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"from", "string", true, nil}, {"to", "string", true, nil}, {"objective", "string", true, nil}, {"completed", "string", true, nil}, {"next", "string", true, nil}, {"repositories", "string", false, nil}, {"verification", "string", false, nil}, {"blockers", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff create --project ./my-project --id api-work --from codex --to claude --objective 'Build API' --completed 'Added routes' --next 'Add tests'"}},
+	"handoff list":     {"handoff list", "List project handoffs", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff list --project ./my-project"}},
+	"handoff latest":   {"handoff latest", "Read the latest project handoff", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp handoff latest --project ./my-project --format text"}},
 	"schema list":      {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":       {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},
 }

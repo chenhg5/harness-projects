@@ -14,6 +14,13 @@ func run(t *testing.T, args ...string) (int, string, string) {
 	return code, out.String(), errOut.String()
 }
 
+func runInput(t *testing.T, input string, args ...string) (int, string, string) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	code := Run(args, bytes.NewBufferString(input), &out, &errOut)
+	return code, out.String(), errOut.String()
+}
+
 func TestProjectLifecycle(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "demo")
 	code, _, stderr := run(t, "project", "init", "--path", root, "--name", "Demo")
@@ -101,5 +108,33 @@ func TestCoordinatorPlan(t *testing.T) {
 	}
 	if plan["readyCount"] != float64(1) || plan["hasWork"] != true {
 		t.Fatalf("unexpected plan: %s", stdout)
+	}
+}
+
+func TestContextAndHandoffLifecycle(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := runInput(t, "Use project files as the portable source of truth.\n", "context", "add", "--project", root, "--id", "portable-context", "--kind", "decision", "--title", "Portable context", "--from", "-", "--tags", "memory,agents"); code != 0 {
+		t.Fatalf("context add code=%d stderr=%s", code, stderr)
+	}
+	code, stdout, stderr := run(t, "context", "search", "--project", root, "--query", "portable agents", "--json")
+	if code != 0 || stderr != "" {
+		t.Fatalf("context search code=%d stderr=%s", code, stderr)
+	}
+	var matches []map[string]any
+	if err := json.Unmarshal([]byte(stdout), &matches); err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("unexpected context matches: %s", stdout)
+	}
+	if code, _, stderr := run(t, "handoff", "create", "--project", root, "--id", "handoff-one", "--from", "codex", "--to", "claude", "--objective", "Build memory", "--completed", "Added search", "--next", "Add import"); code != 0 {
+		t.Fatalf("handoff create code=%d stderr=%s", code, stderr)
+	}
+	code, stdout, stderr = run(t, "handoff", "latest", "--project", root, "--format", "text")
+	if code != 0 || stderr != "" || !bytes.Contains([]byte(stdout), []byte("Build memory")) {
+		t.Fatalf("handoff latest code=%d stderr=%s stdout=%s", code, stderr, stdout)
 	}
 }

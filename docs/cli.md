@@ -34,6 +34,13 @@ hp repository add --project ./my-project --id api --path ../api --default-branch
 hp worktree create --project ./my-project --id api-task --repository-id api
 hp worktree list --project ./my-project --status active
 hp worktree remove --project ./my-project --id api-task
+hp context add --project ./my-project --id api-decision \
+  --kind decision --title "API boundary" --from ./decision.md
+hp context search --project ./my-project --query "API boundary"
+hp handoff create --project ./my-project --id api-work \
+  --from codex --to claude --objective "Build API" \
+  --completed "Added routes" --next "Add tests"
+hp handoff latest --project ./my-project --format text
 hp coordinator plan --project ./my-project --format json
 ```
 
