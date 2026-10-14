@@ -14,11 +14,14 @@ func (a app) goalCreate(args []string) int {
 	title := fs.String("title", "", "goal title (required)")
 	description := fs.String("description", "", "goal description")
 	outcome := fs.String("outcome", "", "observable outcome")
+	method := fs.String("method", "", "optional method: okr|milestone|experiment|metric|custom|none")
 	owner := fs.String("owner", "", "goal owner")
 	targetDate := fs.String("target-date", "", "target date")
 	reviewCadence := fs.String("review-cadence", "", "review cadence")
 	status := fs.String("status", "draft", "draft|active|completed|archived")
 	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	doneWhen := fs.String("done-when", "", "comma-separated completion conditions")
+	evidenceRequired := fs.String("evidence-required", "", "comma-separated required evidence references")
 	keyResults := fs.String("key-results", "", "JSON array of measurable key results")
 	evidence := fs.String("evidence", "", "comma-separated evidence references")
 	format, jsonFlag := outputFlags(fs)
@@ -42,7 +45,15 @@ func (a app) goalCreate(args []string) int {
 	if err != nil {
 		return a.parseError(err)
 	}
-	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: *id, Title: *title, Description: *description, Outcome: *outcome, Owner: *owner, TargetDate: *targetDate, ReviewCadence: *reviewCadence, Status: *status, Acceptance: criteria, KeyResults: results, Evidence: evidenceRefs, CreatedAt: timestamp(), UpdatedAt: timestamp()}
+	doneWhenList, err := commaList(*doneWhen)
+	if err != nil {
+		return a.parseError(err)
+	}
+	evidenceRequiredList, err := commaList(*evidenceRequired)
+	if err != nil {
+		return a.parseError(err)
+	}
+	goal := model.Goal{SchemaVersion: model.ResourceSchemaVersion, ID: *id, Title: *title, Description: *description, Outcome: *outcome, Method: *method, Owner: *owner, TargetDate: *targetDate, ReviewCadence: *reviewCadence, Status: *status, Acceptance: criteria, DoneWhen: doneWhenList, EvidenceRequired: evidenceRequiredList, KeyResults: results, Evidence: evidenceRefs, CreatedAt: timestamp(), UpdatedAt: timestamp()}
 	if err := model.ValidateGoal(goal); err != nil {
 		return a.operationError(err, *id)
 	}
@@ -135,11 +146,14 @@ func (a app) goalUpdate(args []string) int {
 	title := fs.String("title", "", "new title")
 	description := fs.String("description", "", "new description")
 	outcome := fs.String("outcome", "", "new observable outcome")
+	method := fs.String("method", "", "optional method: okr|milestone|experiment|metric|custom|none")
 	owner := fs.String("owner", "", "new goal owner")
 	targetDate := fs.String("target-date", "", "new target date")
 	reviewCadence := fs.String("review-cadence", "", "new review cadence")
 	status := fs.String("status", "", "draft|active|completed|archived")
 	acceptance := fs.String("acceptance", "", "comma-separated acceptance criteria")
+	doneWhen := fs.String("done-when", "", "comma-separated completion conditions")
+	evidenceRequired := fs.String("evidence-required", "", "comma-separated required evidence references")
 	keyResults := fs.String("key-results", "", "JSON array of measurable key results")
 	evidence := fs.String("evidence", "", "comma-separated evidence references")
 	format, jsonFlag := outputFlags(fs)
@@ -167,6 +181,9 @@ func (a app) goalUpdate(args []string) int {
 	if flagSet(fs, "outcome") {
 		goal.Outcome = *outcome
 	}
+	if flagSet(fs, "method") {
+		goal.Method = *method
+	}
 	if flagSet(fs, "owner") {
 		goal.Owner = *owner
 	}
@@ -183,6 +200,18 @@ func (a app) goalUpdate(args []string) int {
 		goal.Acceptance, err = commaList(*acceptance)
 		if err != nil {
 			return a.fail(failure{2, "invalid_arguments", err.Error(), "Use comma-separated non-empty values", "--acceptance"})
+		}
+	}
+	if flagSet(fs, "done-when") {
+		goal.DoneWhen, err = commaList(*doneWhen)
+		if err != nil {
+			return a.parseError(err)
+		}
+	}
+	if flagSet(fs, "evidence-required") {
+		goal.EvidenceRequired, err = commaList(*evidenceRequired)
+		if err != nil {
+			return a.parseError(err)
 		}
 	}
 	if flagSet(fs, "key-results") {

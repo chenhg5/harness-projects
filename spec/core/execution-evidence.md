@@ -5,9 +5,10 @@ Harness Projects treats completion as an evidence-backed state transition.
 ## Goal completion
 
 An agent MUST NOT mark a goal `completed` because its title or acceptance text
-looks satisfied. The goal record MUST contain achieved key results and evidence
-references such as verification files, release URLs, review records, metrics,
-or other inspectable outputs.
+looks satisfied. The goal record MUST contain evidence references such as
+verification files, release URLs, review records, metrics, or other inspectable
+outputs. If the project chooses OKR as its method, key results are additional
+evidence and are not a universal protocol requirement.
 
 ## Task completion
 

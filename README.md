@@ -15,8 +15,9 @@ verification, and harness adapters.
 
 ## Product goals
 
-- Define outcome-oriented goals with measurable key results, owners, dates, and
-  evidence-backed completion.
+- Define outcome-oriented goals with explicit completion conditions, owners,
+  dates, and evidence-backed completion. Projects may use OKR, milestones,
+  experiments, metrics, or another method when useful.
 - Coordinate dependent and parallel tasks through a shared task graph.
 - Run work through Claude Code, Cursor, Codex, and other execution backends.
 - Preserve project memory, decisions, research, plans, work logs, handoffs, and
@@ -50,8 +51,9 @@ Project
 └── Harness adapters
 ```
 
-The first release is local-first and file-based. Goals use an Objective plus
-measurable Key Results model; tasks and runs carry their own delivery and
+The first release is local-first and file-based. Goals are documented outcomes
+with explicit `doneWhen` conditions; optional methods such as OKR can add
+structured key results. Tasks and runs carry their own delivery and
 verification evidence. The architecture leaves room
 for remote runners and hosted event services without making them mandatory.
 
@@ -143,7 +145,7 @@ go build -o ./bin/hp ./cmd/hp
 ./bin/hp state validate --project ./my-project
 ```
 
-See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract. Active goals use measurable Key Results; completion is rejected without evidence.
+See [INSTALL.md](INSTALL.md) for release installation and [docs/cli.md](docs/cli.md) for the command contract. Active goals require a description, outcome, and `doneWhen` conditions; completed goals require inspectable evidence. OKR is optional.
 
 ## Contributing
 

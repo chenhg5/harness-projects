@@ -10,14 +10,16 @@
     "title": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
     "outcome": { "type": "string" },
+    "method": { "enum": ["okr", "milestone", "experiment", "metric", "custom", "none"] },
     "owner": { "type": "string" },
     "targetDate": { "type": "string" },
     "reviewCadence": { "type": "string" },
     "status": { "enum": ["draft", "active", "completed", "archived"] },
     "acceptance": { "type": "array", "items": { "type": "string" } },
+    "doneWhen": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "evidenceRequired": { "type": "array", "items": { "type": "string" } },
     "keyResults": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["id", "metric", "direction", "target", "status"],
@@ -43,7 +45,7 @@
   "allOf": [
     {
       "if": {"properties": {"status": {"enum": ["active", "completed"]}}},
-      "then": {"required": ["description", "outcome", "keyResults"]}
+      "then": {"required": ["description", "outcome", "doneWhen"]}
     },
     {
       "if": {"properties": {"status": {"const": "completed"}}},

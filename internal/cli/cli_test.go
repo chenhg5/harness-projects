@@ -55,7 +55,7 @@ func TestGoalTaskRunLifecycle(t *testing.T) {
 	if code, _, stderr := run(t, "project", "init", "--path", root); code != 0 {
 		t.Fatalf("init code=%d stderr=%s", code, stderr)
 	}
-	if code, _, stderr := run(t, "goal", "create", "--project", root, "--id", "modernize", "--title", "Modernize API", "--description", "Reduce API failure rate with measurable delivery evidence.", "--outcome", "API releases meet the agreed reliability target.", "--key-results", `[{"id":"reliability","metric":"successful API requests","direction":"increase","target":99,"status":"planned"}]`, "--status", "active"); code != 0 {
+	if code, _, stderr := run(t, "goal", "create", "--project", root, "--id", "modernize", "--title", "Modernize API", "--description", "Reduce API failure rate with measurable delivery evidence.", "--outcome", "API releases meet the agreed reliability target.", "--done-when", "reliability target is met", "--key-results", `[{"id":"reliability","metric":"successful API requests","direction":"increase","target":99,"status":"planned"}]`, "--status", "active"); code != 0 {
 		t.Fatalf("goal create code=%d stderr=%s", code, stderr)
 	}
 	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "inventory", "--title", "Inventory API", "--goal-id", "modernize"); code != 0 {

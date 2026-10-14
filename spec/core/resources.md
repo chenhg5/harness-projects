@@ -13,13 +13,13 @@ runs/<run-id>.json
 
 ## Goals
 
-A goal is a long-lived outcome, equivalent to an Objective in an OKR system. It
-MAY span multiple tasks and runs. An active goal MUST have a description, an
-observable outcome, and at least one measurable key result. A key result MUST
-define a metric, direction, target, and status; it SHOULD include a baseline,
-current value, owner, due date, and evidence. Goal statuses are `draft`,
-`active`, `completed`, and `archived`. A goal MUST NOT become `completed` until
-every key result is `achieved` and the goal has evidence references.
+A goal is a long-lived outcome. It MAY span multiple tasks and runs. An active
+goal MUST have a description, an observable outcome, and one or more `doneWhen`
+conditions. Goal statuses are `draft`, `active`, `completed`, and `archived`.
+A goal MUST NOT become `completed` until it has evidence references. A project
+MAY choose OKR, milestones, experiments, metrics, or a custom method. If it
+chooses OKR, a key result SHOULD define a metric, direction, target, current
+value, and evidence; that extension is not required by the core protocol.
 
 ## Tasks
 

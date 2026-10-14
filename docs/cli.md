@@ -26,6 +26,7 @@ hp schema get --command "file write" --format json
 hp goal create --project ./my-project --id modernize-api \
   --title "Modernize API" --description "Reduce failed releases" \
   --outcome "API releases meet the reliability target" \
+  --done-when "reliability target is met,verification is recorded" \
   --key-results '[{"id":"reliability","metric":"successful requests","direction":"increase","target":99,"status":"planned"}]' \
   --status active
 hp task create --project ./my-project --id inventory-api \

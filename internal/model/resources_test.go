@@ -2,20 +2,22 @@ package model
 
 import "testing"
 
-func TestCompletedGoalRequiresAchievedKeyResultsAndEvidence(t *testing.T) {
+func TestCompletedGoalRequiresEvidenceButNotOKR(t *testing.T) {
 	target, current := 1.0, 0.5
-	goal := Goal{ID: "goal", Title: "Goal", Description: "Description", Outcome: "Outcome", Status: "completed", KeyResults: []KeyResult{{ID: "result", Metric: "metric", Direction: "increase", Target: &target, Current: &current, Status: "in_progress"}}}
-	if err := ValidateGoal(goal); err == nil {
-		t.Fatal("expected incomplete key result to block goal completion")
-	}
-	goal.KeyResults[0].Status = "achieved"
+	goal := Goal{ID: "goal", Title: "Goal", Description: "Description", Outcome: "Outcome", DoneWhen: []string{"metric reaches target"}, Status: "completed", KeyResults: []KeyResult{{ID: "result", Metric: "metric", Direction: "increase", Target: &target, Current: &current, Status: "in_progress"}}}
 	if err := ValidateGoal(goal); err == nil {
 		t.Fatal("expected missing evidence to block goal completion")
 	}
 	goal.Evidence = []string{"verification/result.md"}
-	goal.KeyResults[0].Evidence = []string{"verification/result.md"}
 	if err := ValidateGoal(goal); err != nil {
-		t.Fatalf("expected complete goal to validate: %v", err)
+		t.Fatalf("expected completed goal with optional in-progress KR to validate: %v", err)
+	}
+}
+
+func TestActiveGoalDoesNotRequireOKR(t *testing.T) {
+	goal := Goal{ID: "goal", Title: "Goal", Description: "Description", Outcome: "Outcome", DoneWhen: []string{"review is approved"}, Status: "active"}
+	if err := ValidateGoal(goal); err != nil {
+		t.Fatalf("expected non-OKR goal to validate: %v", err)
 	}
 }
 

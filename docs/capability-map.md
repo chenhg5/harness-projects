@@ -6,7 +6,7 @@ a claim that every feature is implemented today.
 
 | Capability | Current `hp` | Target in Harness Projects | Provider-neutral abstraction |
 | --- | --- | --- | --- |
-| Outcome-oriented project goal | Goal JSON resources with key results and evidence | Goal, constraints, measurable results, instructions, completion gates | `Project` and `Goal` |
+| Outcome-oriented project goal | Goal JSON index plus optional Markdown document, doneWhen conditions, and evidence | Goal, constraints, optional method data, instructions, completion gates | `Project` and `Goal` |
 | Shared project context | Context files, searchable memory records, and handoffs | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
 | Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
 | Coordinator | Local readiness plan | Plan, route, observe, aggregate, replan | `Coordinator` |

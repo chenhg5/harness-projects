@@ -11,20 +11,23 @@ const ResourceSchemaVersion = "1"
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
 
 type Goal struct {
-	SchemaVersion string      `json:"schemaVersion"`
-	ID            string      `json:"id"`
-	Title         string      `json:"title"`
-	Description   string      `json:"description,omitempty"`
-	Outcome       string      `json:"outcome,omitempty"`
-	Owner         string      `json:"owner,omitempty"`
-	TargetDate    string      `json:"targetDate,omitempty"`
-	ReviewCadence string      `json:"reviewCadence,omitempty"`
-	Status        string      `json:"status"`
-	Acceptance    []string    `json:"acceptance,omitempty"`
-	KeyResults    []KeyResult `json:"keyResults,omitempty"`
-	Evidence      []string    `json:"evidence,omitempty"`
-	CreatedAt     string      `json:"createdAt"`
-	UpdatedAt     string      `json:"updatedAt"`
+	SchemaVersion    string      `json:"schemaVersion"`
+	ID               string      `json:"id"`
+	Title            string      `json:"title"`
+	Description      string      `json:"description,omitempty"`
+	Outcome          string      `json:"outcome,omitempty"`
+	Method           string      `json:"method,omitempty"`
+	Owner            string      `json:"owner,omitempty"`
+	TargetDate       string      `json:"targetDate,omitempty"`
+	ReviewCadence    string      `json:"reviewCadence,omitempty"`
+	Status           string      `json:"status"`
+	Acceptance       []string    `json:"acceptance,omitempty"`
+	DoneWhen         []string    `json:"doneWhen,omitempty"`
+	EvidenceRequired []string    `json:"evidenceRequired,omitempty"`
+	KeyResults       []KeyResult `json:"keyResults,omitempty"`
+	Evidence         []string    `json:"evidence,omitempty"`
+	CreatedAt        string      `json:"createdAt"`
+	UpdatedAt        string      `json:"updatedAt"`
 }
 
 type KeyResult struct {
@@ -119,9 +122,12 @@ func ValidateGoal(goal Goal) error {
 		if strings.TrimSpace(goal.Outcome) == "" {
 			return fmt.Errorf("active or completed goals require an outcome")
 		}
-		if len(goal.KeyResults) == 0 {
-			return fmt.Errorf("active or completed goals require at least one key result")
+		if len(goal.DoneWhen) == 0 {
+			return fmt.Errorf("active or completed goals require at least one doneWhen condition")
 		}
+	}
+	if goal.Method != "" && !map[string]bool{"okr": true, "milestone": true, "experiment": true, "metric": true, "custom": true, "none": true}[goal.Method] {
+		return fmt.Errorf("invalid goal method %q", goal.Method)
 	}
 	for _, result := range goal.KeyResults {
 		if err := ValidateKeyResult(result); err != nil {
@@ -131,11 +137,6 @@ func ValidateGoal(goal Goal) error {
 	if goal.Status == "completed" {
 		if len(goal.Evidence) == 0 {
 			return fmt.Errorf("completed goals require evidence")
-		}
-		for _, result := range goal.KeyResults {
-			if result.Status != "achieved" {
-				return fmt.Errorf("completed goals require every key result to be achieved")
-			}
 		}
 	}
 	return nil
