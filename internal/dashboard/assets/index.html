@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{.Locale}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,56 +7,65 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <a class="skip-link" href="#overview">Skip to project overview</a>
+  <a class="skip-link" href="#overview">{{.L.SkipToOverview}}</a>
   <div class="shell">
-    <header class="topbar"><div class="brand"><span class="mark">hp</span><span>Harness Projects</span></div><span class="local">LOCAL PROJECT VIEW</span></header>
-    <nav class="section-nav" aria-label="Project sections">
-      <a href="#overview">Overview</a>
-      <a href="#goals">Goals <span class="nav-count">{{len .Goals}}</span></a>
-      <a href="#tasks">Tasks <span class="nav-count">{{.TaskCount}}</span></a>
-      <a href="#next-actions">Next actions</a>
-      <a href="#repositories">Repositories</a>
-      <a href="#activity">Activity</a>
-      <a class="refresh-link" href="/">Refresh view</a>
+    <header class="topbar">
+      <div class="brand"><span class="mark">hp</span><span>Harness Projects</span></div>
+      <div class="topbar-tools">
+        <span class="local">{{.L.LocalProjectView}}</span>
+        <nav class="locale-switch" aria-label="{{.L.Language}}">
+          <a href="/?lang=en" lang="en" {{if eq .Locale "en"}}aria-current="page"{{end}}>English</a>
+          <a href="/?lang=zh-CN" lang="zh-CN" {{if eq .Locale "zh-CN"}}aria-current="page"{{end}}>简体中文</a>
+        </nav>
+      </div>
+    </header>
+    <nav class="section-nav" aria-label="{{.L.ProjectSections}}">
+      <a href="#overview">{{.L.Overview}}</a>
+      <a href="#goals">{{.L.Goals}} <span class="nav-count">{{len .Goals}}</span></a>
+      <a href="#tasks">{{.L.Tasks}} <span class="nav-count">{{.TaskCount}}</span></a>
+      <a href="#next-actions">{{.L.NextActions}}</a>
+      <a href="#repositories">{{.L.Repositories}}</a>
+      <a href="#activity">{{.L.Activity}}</a>
+      <a class="refresh-link" href="/?lang={{.Locale}}">{{.L.RefreshView}}</a>
     </nav>
     <main>
       <section class="hero" id="overview">
-        <div><p class="eyebrow">PROJECT OVERVIEW</p><h1>{{.Name}}</h1><p class="path">{{.Path}}</p></div>
-        <div class="health"><span class="health-dot"></span><span>{{.State.Health}}</span><small>updated {{.State.UpdatedAt}}</small></div>
+        <div><p class="eyebrow">{{.L.ProjectOverview}}</p><h1>{{.Name}}</h1><p class="path">{{.Path}}</p></div>
+        <div class="health"><span class="health-dot"></span><span>{{.Status .State.Health}}</span><small>{{.L.Updated}} {{.State.UpdatedAt}}</small></div>
       </section>
-      <section class="summary-grid" aria-label="Project summary">
-        <article class="metric"><span>Current phase</span><strong>{{.State.CurrentPhase}}</strong><small>{{.State.Progress}}</small></article>
-        <article class="metric"><span>Tasks completed</span><strong>{{.Completed}} <em>/ {{.TaskCount}}</em></strong><div class="bar"><i style="width:{{.TaskPercent}}%"></i></div><small>{{.TaskPercent}}% of tracked tasks</small></article>
-        <article class="metric"><span>In progress</span><strong>{{.Active}}</strong><small>{{.Blocked}} blocked</small></article>
-        <article class="metric"><span>Repositories</span><strong>{{len .Repositories}}</strong><small>participating source repositories</small></article>
+      <section class="summary-grid" aria-label="{{.L.ProjectSummary}}">
+        <article class="metric"><span>{{.L.CurrentPhase}}</span><strong>{{.State.CurrentPhase}}</strong><small>{{.State.Progress}}</small></article>
+        <article class="metric"><span>{{.L.TasksCompleted}}</span><strong>{{.Completed}} <em>/ {{.TaskCount}}</em></strong><div class="bar"><i style="width:{{.TaskPercent}}%"></i></div><small>{{.L.TrackedTasksProgress}} {{.TaskPercent}}%</small></article>
+        <article class="metric"><span>{{.L.InProgress}}</span><strong>{{.Active}}</strong><small>{{.Blocked}} {{.L.Blocked}}</small></article>
+        <article class="metric"><span>{{.L.Repositories}}</span><strong>{{len .Repositories}}</strong><small>{{.L.ParticipatingSourceRepositories}}</small></article>
       </section>
       <div class="columns">
         <div class="main-column">
-          <section class="panel" id="goals"><div class="section-heading"><div><p class="eyebrow">OUTCOMES</p><h2>Goals</h2></div><span class="count">{{len .Goals}}</span></div>
+          <section class="panel" id="goals"><div class="section-heading"><div><p class="eyebrow">{{.L.Outcomes}}</p><h2>{{.L.Goals}}</h2></div><span class="count">{{len .Goals}}</span></div>
             {{if .Goals}}
               {{range .Goals}}<article class="goal">
-                <div class="goal-head"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3></div><span class="badge {{.Status}}">{{.Status}}</span></div>
+                <div class="goal-head"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3></div><span class="badge {{.Status}}">{{$.Status .Status}}</span></div>
                 {{if .Outcome}}<p class="outcome">{{.Outcome}}</p>{{else if .Description}}<p class="outcome">{{.Description}}</p>{{end}}
-                {{if .DoneWhen}}<h4>Done when</h4><ul class="conditions">{{range .DoneWhen}}<li>{{.}}</li>{{end}}</ul>{{end}}
-                {{if .EvidenceRequired}}<p class="muted"><strong>Evidence required:</strong> {{range $i, $v := .EvidenceRequired}}{{if $i}} · {{end}}{{$v}}{{end}}</p>{{end}}
-                {{if .KeyResults}}<div class="subsection"><h4>Key results</h4>{{range .KeyResults}}<div class="subrow"><div><strong>{{.Metric}}</strong>{{if .Description}}<p>{{.Description}}</p>{{end}}{{if .Target}}<small>{{if .Current}}Current {{.Current}} · {{end}}Target {{.Target}} {{.Unit}}</small>{{end}}</div><span class="badge {{.Status}}">{{.Status}}</span></div>{{end}}</div>{{end}}
-                <div class="goal-footer"><span>{{.CompletedTasks}} / {{.TaskCount}} linked tasks completed</span><div class="bar"><i style="width:{{.TaskPercent}}%"></i></div><span>{{.TaskPercent}}%</span></div>
-                {{if .Document}}<details><summary>Read goal document</summary><pre>{{.Document}}</pre></details>{{end}}
+                {{if .DoneWhen}}<h4>{{$.L.DoneWhen}}</h4><ul class="conditions">{{range .DoneWhen}}<li>{{.}}</li>{{end}}</ul>{{end}}
+                {{if .EvidenceRequired}}<p class="muted"><strong>{{$.L.EvidenceRequired}}</strong> {{range $i, $v := .EvidenceRequired}}{{if $i}} · {{end}}{{$v}}{{end}}</p>{{end}}
+                {{if .KeyResults}}<div class="subsection"><h4>{{$.L.KeyResults}}</h4>{{range .KeyResults}}<div class="subrow"><div><strong>{{.Metric}}</strong>{{if .Description}}<p>{{.Description}}</p>{{end}}{{if .Target}}<small>{{if .Current}}{{$.L.Current}} {{.Current}} · {{end}}{{$.L.Target}} {{.Target}} {{.Unit}}</small>{{end}}</div><span class="badge {{.Status}}">{{$.Status .Status}}</span></div>{{end}}</div>{{end}}
+                <div class="goal-footer"><span>{{.CompletedTasks}} / {{.TaskCount}} {{$.L.LinkedTasksCompleted}}</span><div class="bar"><i style="width:{{.TaskPercent}}%"></i></div><span>{{.TaskPercent}}%</span></div>
+                {{if .Document}}<details><summary>{{$.L.ReadGoalDocument}}</summary><pre>{{.Document}}</pre></details>{{end}}
               </article>{{end}}
-            {{else}}<p class="empty">No goals recorded yet.</p>{{end}}
+            {{else}}<p class="empty">{{.L.NoGoals}}</p>{{end}}
           </section>
-          <section class="panel" id="tasks"><div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>Tasks</h2></div><span class="count">{{.TaskCount}}</span></div>
-            {{if .Tasks}}<div class="task-list">{{range .Tasks}}<div class="task"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3>{{if .Description}}<p>{{.Description}}</p>{{end}}</div><span class="badge {{.Status}}">{{.Status}}</span></div>{{end}}</div>{{else}}<p class="empty">No tasks recorded yet.</p>{{end}}
+          <section class="panel" id="tasks"><div class="section-heading"><div><p class="eyebrow">{{.L.Execution}}</p><h2>{{.L.Tasks}}</h2></div><span class="count">{{.TaskCount}}</span></div>
+            {{if .Tasks}}<div class="task-list">{{range .Tasks}}<div class="task"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3>{{if .Description}}<p>{{.Description}}</p>{{end}}</div><span class="badge {{.Status}}">{{$.Status .Status}}</span></div>{{end}}</div>{{else}}<p class="empty">{{.L.NoTasks}}</p>{{end}}
           </section>
         </div>
         <aside class="side-column">
-          <section class="panel" id="next-actions"><p class="eyebrow">WHAT'S NEXT</p><h2>Next actions</h2>{{if .State.NextActions}}<ol class="actions">{{range .State.NextActions}}<li>{{.}}</li>{{end}}</ol>{{else}}<p class="empty">No next action recorded.</p>{{end}}{{if .State.Risks}}<div class="risk"><h4>Risks</h4><ul>{{range .State.Risks}}<li>{{.}}</li>{{end}}</ul></div>{{end}}</section>
-          <section class="panel" id="repositories"><p class="eyebrow">SOURCE CODE</p><h2>Repositories</h2>{{if .Repositories}}{{range .Repositories}}<div class="repo"><strong>{{.ID}}</strong><small>{{.URL}}</small>{{if .Path}}<small>{{.Path}}</small>{{end}}</div>{{end}}{{else}}<p class="empty">No repositories registered.</p>{{end}}</section>
-          <section class="panel" id="activity"><p class="eyebrow">AGENT ACTIVITY</p><h2>Latest work log</h2>{{if .LatestWorklog}}<small>{{.LatestWorklog.Name}}</small><details><summary>Read work log</summary><pre>{{.LatestWorklog.Content}}</pre></details>{{else}}<p class="empty">No work log yet.</p>{{end}}{{if .LatestHandoff}}<h3 class="handoff-heading">Latest handoff</h3><small>{{.LatestHandoff.Name}}</small><details><summary>Read handoff</summary><pre>{{.LatestHandoff.Content}}</pre></details>{{end}}</section>
+          <section class="panel" id="next-actions"><p class="eyebrow">{{.L.WhatsNext}}</p><h2>{{.L.NextActions}}</h2>{{if .State.NextActions}}<ol class="actions">{{range .State.NextActions}}<li>{{.}}</li>{{end}}</ol>{{else}}<p class="empty">{{.L.NoNextAction}}</p>{{end}}{{if .State.Risks}}<div class="risk"><h4>{{.L.Risks}}</h4><ul>{{range .State.Risks}}<li>{{.}}</li>{{end}}</ul></div>{{end}}</section>
+          <section class="panel" id="repositories"><p class="eyebrow">{{.L.SourceCode}}</p><h2>{{.L.Repositories}}</h2>{{if .Repositories}}{{range .Repositories}}<div class="repo"><strong>{{.ID}}</strong><small>{{.URL}}</small>{{if .Path}}<small>{{.Path}}</small>{{end}}</div>{{end}}{{else}}<p class="empty">{{.L.NoRepositories}}</p>{{end}}</section>
+          <section class="panel" id="activity"><p class="eyebrow">{{.L.AgentActivity}}</p><h2>{{.L.LatestWorklog}}</h2>{{if .LatestWorklog}}<small>{{.LatestWorklog.Name}}</small><details><summary>{{.L.ReadWorklog}}</summary><pre>{{.LatestWorklog.Content}}</pre></details>{{else}}<p class="empty">{{.L.NoWorklog}}</p>{{end}}{{if .LatestHandoff}}<h3 class="handoff-heading">{{.L.LatestHandoff}}</h3><small>{{.LatestHandoff.Name}}</small><details><summary>{{.L.ReadHandoff}}</summary><pre>{{.LatestHandoff.Content}}</pre></details>{{end}}</section>
         </aside>
       </div>
     </main>
-    <footer>Read-only local view · Use Refresh view to load new changes · <a href="/api/project">JSON API</a></footer>
+    <footer>{{.L.ReadOnlyLocalView}} · {{.L.RefreshHint}} · <a href="/api/project">{{.L.JSONAPI}}</a></footer>
   </div>
 </body>
 </html>

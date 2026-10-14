@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -75,5 +76,71 @@ func TestDashboardRejectsForeignHostsAndWrites(t *testing.T) {
 	handler.ServeHTTP(write, httptest.NewRequest(http.MethodPost, "http://127.0.0.1/api/project", nil))
 	if write.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("write code=%d", write.Code)
+	}
+}
+
+func TestDashboardLanguageSwitch(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	plan, files, err := project.PlanInit(root, "Demo", false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := project.ApplyInit(plan, files); err != nil {
+		t.Fatal(err)
+	}
+	handler := Handler(root)
+
+	request := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/?lang=zh-CN", nil)
+	request.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	chinese := response.Body.String()
+	for _, want := range []string{`<html lang="zh-CN">`, "项目概览", "暂无目标。", `href="/?lang=zh-CN"`, "刷新看板"} {
+		if !strings.Contains(chinese, want) {
+			t.Errorf("Chinese dashboard missing %q", want)
+		}
+	}
+	if got := response.Header().Get("Content-Language"); got != "zh-CN" {
+		t.Errorf("Content-Language = %q", got)
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "http://127.0.0.1/", nil)
+	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if !strings.Contains(response.Body.String(), "项目概览") {
+		t.Fatal("browser language was not selected")
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "http://127.0.0.1/?lang=en", nil)
+	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	english := response.Body.String()
+	if !strings.Contains(english, `href="/?lang=en"`) || !strings.Contains(english, "Project overview") || strings.Contains(english, "暂无目标。") {
+		t.Fatal("explicit English selection did not override browser language")
+	}
+}
+
+func TestSelectLocaleHonorsBrowserPreferenceWeights(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/", nil)
+	request.Header.Set("Accept-Language", "en;q=0.2,zh-CN;q=0.9")
+	if got := selectLocale(request); got != "zh-CN" {
+		t.Fatalf("selected %q, want zh-CN", got)
+	}
+	request.Header.Set("Accept-Language", "zh-CN;q=0,en;q=0.8")
+	if got := selectLocale(request); got != "en" {
+		t.Fatalf("selected %q, want en", got)
+	}
+}
+
+func TestDashboardLabelsHaveBothLanguages(t *testing.T) {
+	fields := reflect.TypeOf(english)
+	englishValues := reflect.ValueOf(english)
+	chineseValues := reflect.ValueOf(simplifiedChinese)
+	for index := 0; index < fields.NumField(); index++ {
+		if englishValues.Field(index).String() == "" || chineseValues.Field(index).String() == "" {
+			t.Errorf("missing translation for %s", fields.Field(index).Name)
+		}
 	}
 }

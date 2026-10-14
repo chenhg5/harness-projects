@@ -75,6 +75,7 @@ dashboard. The server listens on `127.0.0.1` and chooses a free port unless
 section navigation lets you jump between the overview, goals, tasks, next
 actions, repositories, and activity. Use Refresh view to load updated files;
 `GET /api/project` returns the same project summary as JSON. The dashboard reads
-the project files again for each request.
+the project files again for each request. The page supports English and
+Simplified Chinese through its header switch or `?lang=en` / `?lang=zh-CN`.
 Task percentages count completed tasks; they do not change goal status or claim
 that a goal's acceptance conditions have been met.

@@ -152,8 +152,10 @@ func Handler(root string) http.Handler {
 			http.Error(w, "Could not read project data", http.StatusInternalServerError)
 			return
 		}
+		view := newPageView(summary, selectLocale(r))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := page.Execute(w, summary); err != nil {
+		w.Header().Set("Content-Language", view.Locale)
+		if err := page.Execute(w, view); err != nil {
 			return
 		}
 	})
