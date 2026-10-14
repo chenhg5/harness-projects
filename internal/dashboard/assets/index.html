@@ -3,15 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="20">
   <title>{{.Name}} · Harness Projects</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <a class="skip-link" href="#overview">Skip to project overview</a>
   <div class="shell">
     <header class="topbar"><div class="brand"><span class="mark">hp</span><span>Harness Projects</span></div><span class="local">LOCAL PROJECT VIEW</span></header>
+    <nav class="section-nav" aria-label="Project sections">
+      <a href="#overview">Overview</a>
+      <a href="#goals">Goals <span class="nav-count">{{len .Goals}}</span></a>
+      <a href="#tasks">Tasks <span class="nav-count">{{.TaskCount}}</span></a>
+      <a href="#next-actions">Next actions</a>
+      <a href="#repositories">Repositories</a>
+      <a href="#activity">Activity</a>
+      <a class="refresh-link" href="/">Refresh view</a>
+    </nav>
     <main>
-      <section class="hero">
+      <section class="hero" id="overview">
         <div><p class="eyebrow">PROJECT OVERVIEW</p><h1>{{.Name}}</h1><p class="path">{{.Path}}</p></div>
         <div class="health"><span class="health-dot"></span><span>{{.State.Health}}</span><small>updated {{.State.UpdatedAt}}</small></div>
       </section>
@@ -23,7 +32,7 @@
       </section>
       <div class="columns">
         <div class="main-column">
-          <section class="panel"><div class="section-heading"><div><p class="eyebrow">OUTCOMES</p><h2>Goals</h2></div><span class="count">{{len .Goals}}</span></div>
+          <section class="panel" id="goals"><div class="section-heading"><div><p class="eyebrow">OUTCOMES</p><h2>Goals</h2></div><span class="count">{{len .Goals}}</span></div>
             {{if .Goals}}
               {{range .Goals}}<article class="goal">
                 <div class="goal-head"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3></div><span class="badge {{.Status}}">{{.Status}}</span></div>
@@ -36,18 +45,18 @@
               </article>{{end}}
             {{else}}<p class="empty">No goals recorded yet.</p>{{end}}
           </section>
-          <section class="panel"><div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>Tasks</h2></div><span class="count">{{.TaskCount}}</span></div>
+          <section class="panel" id="tasks"><div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>Tasks</h2></div><span class="count">{{.TaskCount}}</span></div>
             {{if .Tasks}}<div class="task-list">{{range .Tasks}}<div class="task"><div><span class="id">{{.ID}}</span><h3>{{.Title}}</h3>{{if .Description}}<p>{{.Description}}</p>{{end}}</div><span class="badge {{.Status}}">{{.Status}}</span></div>{{end}}</div>{{else}}<p class="empty">No tasks recorded yet.</p>{{end}}
           </section>
         </div>
         <aside class="side-column">
-          <section class="panel"><p class="eyebrow">WHAT'S NEXT</p><h2>Next actions</h2>{{if .State.NextActions}}<ol class="actions">{{range .State.NextActions}}<li>{{.}}</li>{{end}}</ol>{{else}}<p class="empty">No next action recorded.</p>{{end}}{{if .State.Risks}}<div class="risk"><h4>Risks</h4><ul>{{range .State.Risks}}<li>{{.}}</li>{{end}}</ul></div>{{end}}</section>
-          <section class="panel"><p class="eyebrow">SOURCE CODE</p><h2>Repositories</h2>{{if .Repositories}}{{range .Repositories}}<div class="repo"><strong>{{.ID}}</strong><small>{{.URL}}</small>{{if .Path}}<small>{{.Path}}</small>{{end}}</div>{{end}}{{else}}<p class="empty">No repositories registered.</p>{{end}}</section>
-          <section class="panel"><p class="eyebrow">AGENT ACTIVITY</p><h2>Latest work log</h2>{{if .LatestWorklog}}<small>{{.LatestWorklog.Name}}</small><details><summary>Read work log</summary><pre>{{.LatestWorklog.Content}}</pre></details>{{else}}<p class="empty">No work log yet.</p>{{end}}{{if .LatestHandoff}}<h3 class="handoff-heading">Latest handoff</h3><small>{{.LatestHandoff.Name}}</small><details><summary>Read handoff</summary><pre>{{.LatestHandoff.Content}}</pre></details>{{end}}</section>
+          <section class="panel" id="next-actions"><p class="eyebrow">WHAT'S NEXT</p><h2>Next actions</h2>{{if .State.NextActions}}<ol class="actions">{{range .State.NextActions}}<li>{{.}}</li>{{end}}</ol>{{else}}<p class="empty">No next action recorded.</p>{{end}}{{if .State.Risks}}<div class="risk"><h4>Risks</h4><ul>{{range .State.Risks}}<li>{{.}}</li>{{end}}</ul></div>{{end}}</section>
+          <section class="panel" id="repositories"><p class="eyebrow">SOURCE CODE</p><h2>Repositories</h2>{{if .Repositories}}{{range .Repositories}}<div class="repo"><strong>{{.ID}}</strong><small>{{.URL}}</small>{{if .Path}}<small>{{.Path}}</small>{{end}}</div>{{end}}{{else}}<p class="empty">No repositories registered.</p>{{end}}</section>
+          <section class="panel" id="activity"><p class="eyebrow">AGENT ACTIVITY</p><h2>Latest work log</h2>{{if .LatestWorklog}}<small>{{.LatestWorklog.Name}}</small><details><summary>Read work log</summary><pre>{{.LatestWorklog.Content}}</pre></details>{{else}}<p class="empty">No work log yet.</p>{{end}}{{if .LatestHandoff}}<h3 class="handoff-heading">Latest handoff</h3><small>{{.LatestHandoff.Name}}</small><details><summary>Read handoff</summary><pre>{{.LatestHandoff.Content}}</pre></details>{{end}}</section>
         </aside>
       </div>
     </main>
-    <footer>Read-only local view · Refreshes every 20 seconds · <a href="/api/project">JSON API</a></footer>
+    <footer>Read-only local view · Use Refresh view to load new changes · <a href="/api/project">JSON API</a></footer>
   </div>
 </body>
 </html>

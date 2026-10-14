@@ -12,8 +12,10 @@ The command prints a local URL. Add `--port 8765` for a fixed port or omit
 The page shows the project's current phase, health, progress summary, goals,
 completion conditions, optional key results, linked task counts, all task
 statuses, registered repositories, next actions, risks, and the latest work log
-and handoff. Goal Markdown is available as an expandable document. It refreshes
-every 20 seconds and reads files on each request. `GET /api/project` provides
+and handoff. Goal Markdown is available as an expandable document. A sticky
+section navigation bar jumps to each area, and its Refresh view link loads
+changes without interrupting a reading session. Each page request reads the
+project files again. `GET /api/project` provides
 the same snapshot as JSON for local integrations.
 
 The dashboard is read-only and binds to `127.0.0.1` only. It does not expose
