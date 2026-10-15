@@ -9,7 +9,7 @@ a claim that every feature is implemented today.
 | Outcome-oriented project goal | Goal JSON index plus optional Markdown document, doneWhen conditions, and evidence | Goal, constraints, optional method data, instructions, completion gates | `Project` and `Goal` |
 | Shared project context | Context files, searchable memory records, and handoffs | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
 | Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
-| Coordinator | Local readiness plan and durable assignment to an agent session | Plan, route, observe, aggregate, replan | `Coordinator` |
+| Coordinator | Local readiness plan and durable assignment to an agent session | Assign, try direct CLI delivery, downgrade to inbox when delivery cannot start, observe, aggregate, replan | `Coordinator` |
 | Agent discovery | Local session registration, lease renewal, capability filters, stale pruning, and task inbox | Discover reachable agents across machines and supported transports | `AgentPresence` |
 | Execution sessions | Run JSON resources | Resumable runs and provider threads | `Run` and `Thread` |
 | Claude Code integration | Generated entry files only | Thread/session adapter | `ExecutionAdapter` |

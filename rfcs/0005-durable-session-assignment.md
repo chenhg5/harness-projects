@@ -9,7 +9,10 @@
 Assigning a task to an agent session is a durable routing decision. It does not
 require a message transport or start the provider. The agent can later find its
 work by querying the project with its own harness name and provider session ID.
-Direct CLI dispatch is an optional execution path governed by RFC 0003.
+The intended Coordinator flow first records this assignment, then attempts
+direct CLI delivery to that exact session when an adapter can do so safely.
+If direct delivery is unavailable before sending work, the assignment remains
+in the inbox for voluntary discovery. RFC 0003 defines the direct path.
 
 ## Contract
 
@@ -36,9 +39,30 @@ tasks whose dependencies are complete and whose status allows work to begin.
 
 Assignment does not mean that the agent saw, accepted, or started the task.
 The task status, run records, work logs, and verification evidence communicate
-those later stages. The CLI MUST NOT resume or launch a provider as a side
-effect of task assignment or inbox retrieval. Only a future explicit dispatch
-command may do so, with the safeguards in RFC 0003.
+those later stages. `hp task assign` and `hp task inbox` MUST NOT resume or
+launch a provider as a side effect. A separate `hp dispatch` command is the
+planned direct delivery path and MUST follow RFC 0003. Assignment is its
+durable fallback, not a replacement for CLI delivery.
+
+## Delivery and fallback
+
+The future Coordinator SHOULD use the following order for an explicitly chosen
+existing provider session:
+
+1. Persist the task assignment to `(harness, sessionId)`.
+2. Check dependency readiness, adapter support, worktree ownership, and whether
+   that exact session can safely receive a CLI prompt.
+3. If safe, deliver the task through the provider adapter and record the run.
+4. If delivery cannot begin, retain the assignment and report that the task is
+   waiting in the session inbox, with the reason. Do not substitute a different
+   session or claim that delivery succeeded.
+
+A failed preflight can safely downgrade to inbox discovery. Once a CLI call may
+have sent a prompt, an unclear outcome MUST be recorded as uncertain delivery
+and surfaced for reconciliation; the Coordinator MUST NOT blindly retry and
+create duplicate work. If the request selected `--session new`, there is no
+known session ID for an inbox fallback until the provider returns one, so a
+failed launch MUST be reported rather than silently queued to an invented ID.
 
 ## Workflow
 
@@ -46,7 +70,7 @@ command may do so, with the safeguards in RFC 0003.
 hp agent discover --project . --module api
 hp task assign --project . --id implement-api --registration-id <id>
 
-# In the assigned provider session, now or later:
+# If direct delivery cannot start, in the assigned provider session later:
 hp agent register --project . --harness claude-code --session-id <actual-id>
 hp task inbox --project . --harness claude-code --session-id <actual-id>
 ```
@@ -62,3 +86,5 @@ machine sees assignments only after project changes are synchronized. Inbox
 lookup proves a matching ID was supplied, not that the caller controls the
 provider session. Concurrent task file edits still require normal Git merge
 handling; this RFC does not define a distributed claim lock or reliable wakeup.
+The reference CLI currently implements assignment and inbox discovery; direct
+provider adapters and the downgrade orchestration remain to be implemented.

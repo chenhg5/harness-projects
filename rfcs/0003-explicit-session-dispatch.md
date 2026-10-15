@@ -32,7 +32,8 @@ provider-neutral task and run records.
 This RFC covers local CLI execution through provider adapters. It does not
 define remote/cloud dispatch, messaging bridges, or a common transcript format.
 Task assignment and voluntary inbox discovery are defined in RFC 0005 and do
-not require this execution transport.
+not require this execution transport. They are the durable fallback when the
+selected session cannot safely be called through its provider CLI.
 It does not imply that one provider's session can be resumed by another
 provider. Cross-harness continuation uses project goals, tasks, work logs,
 handoffs, artifacts, and verification evidence.
@@ -60,6 +61,15 @@ is an explicit request to resume that conversation. The CLI MUST NOT change
 one request into the other as an automatic fallback. If an ID cannot be
 validated or resumed, dispatch fails with a recoverable error and leaves the
 requested ID in the run record for inspection.
+
+For a known existing session, the Coordinator SHOULD persist the task's
+assignment before attempting CLI delivery. If adapter preflight cannot start
+delivery, it SHOULD return a distinct queued-for-inbox outcome under RFC 0005.
+If the provider call may already have sent the prompt, the outcome is uncertain:
+the Coordinator MUST preserve the attempted run and require reconciliation
+before retrying. It MUST NOT create a new session or send the prompt again as
+an automatic fallback. A `new` session request cannot fall back to a session
+inbox unless the provider has returned an effective session ID.
 
 ### Identity and binding
 

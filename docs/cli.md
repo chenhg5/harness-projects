@@ -101,8 +101,11 @@ into the task. `hp task inbox` lets the assigned session find active work and
 dependency readiness on its next visit. It does not require a live lease or
 start a provider process. Reassignment requires `--replace`; `hp task
 unassign` clears the current address while retaining assignment history.
-Cross-harness handoffs still use project files, while future CLI dispatch
-requires an explicitly selected provider session.
+Cross-harness handoffs still use project files. The planned `hp dispatch`
+command will try direct CLI delivery to an explicitly selected session, then
+use the durable assignment as its fallback when delivery cannot begin safely.
+The current CLI implements assignment and inbox discovery; it does not yet
+launch provider CLIs.
 
 ## Local dashboard
 

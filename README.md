@@ -122,7 +122,9 @@ goals, tasks, runs, portable memory records, and handoffs, compute a local
 Coordinator plan, register repositories, and create or remove local Git
 worktrees. Agents can register and discover local session presence with bounded
 leases. Tasks can be assigned to a provider session and discovered later through
-that session's inbox, without waking the provider. The next runtime capabilities are:
+that session's inbox. Direct CLI delivery to the selected session remains a
+planned capability; the inbox provides the fallback when delivery cannot begin
+safely. The next runtime capabilities are:
 
 1. Project goals, instructions, measurable key results, memory, and evidence;
 2. Repository clone, remote branch, and execution backend adapters;
