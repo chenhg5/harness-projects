@@ -52,6 +52,11 @@ The project-level controller. It turns goals into tasks, resolves dependencies,
 routes tasks to execution backends, collects results, requests approval, and
 decides whether to continue, retry, replan, or stop.
 
+The current Coordinator is an explicit, transferable assignment to one
+registered provider session. Its optional interval or cron wakeup routine
+follows that role across handoffs. A local foreground scheduler attempts
+delivery; its execution checkpoint is separate from Git-tracked project state.
+
 Routing starts with durable assignment: a task names a harness and provider
 session ID. The local Coordinator then tries direct CLI delivery when the
 adapter can safely address that session. If delivery cannot start, the task

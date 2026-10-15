@@ -22,7 +22,8 @@ Commands:
   worklog create|list|latest      Record and read agent work sessions
   cleanup plan|apply              Archive stale transient files safely
   state get|update|validate       Inspect and update the project control snapshot
-  coordinator plan|dispatch       Plan work and deliver it to an explicit session
+  coordinator assign|get|clear|plan|dispatch Manage the Coordinator and dispatch
+  wakeup configure|status|once|start Schedule and run Coordinator wakeups
   file write|read                 Write and read project files
   schema list|get                 Inspect the command interface
 
@@ -44,7 +45,8 @@ var groupHelp = map[string]string{
 	"worklog":     "Work log commands: create, list, latest\nExample: hp worklog latest --project ./my-project\n",
 	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
 	"state":       "State commands: get, update, validate\nExample: hp state validate --project ./my-project\n",
-	"coordinator": "Coordinator commands: plan, dispatch\nExample: hp coordinator dispatch --project ./my-project --task-id api --harness codex --session-id <id> --worktree ./repos/api\n",
+	"coordinator": "Coordinator commands: assign, get, clear, plan, dispatch\nExample: hp coordinator assign --project ./my-project --registration-id <id>\n",
+	"wakeup":      "Wakeup commands: configure, status, once, start\nExample: hp wakeup configure --project ./my-project --every 30m --worktree repos/api --prompt-file agents/coordinator-wakeup.md\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
 	"schema":      "Schema commands: list, get\nExample: hp schema get --command 'project init'\n",
 }
@@ -167,8 +169,29 @@ var commandHelp = map[string]string{
 	"coordinator plan": `hp coordinator plan --project <directory> [--format json|text]
   Compute dispatchable and waiting tasks without starting an Agent.
 `,
+	"coordinator assign": `hp coordinator assign --project <directory> --registration-id <id> [--replace] [--dry-run]
+  Designate one registered session as the current project Coordinator. Handoffs retain assignment history.
+`,
+	"coordinator get": `hp coordinator get --project <directory> [--format json|text]
+  Read the current Coordinator and assignment history.
+`,
+	"coordinator clear": `hp coordinator clear --project <directory> --registration-id <current-id> [--dry-run]
+  End the current Coordinator term without removing session participation.
+`,
 	"coordinator dispatch": `hp coordinator dispatch --project <directory> --task-id <id> --harness codex|claude-code|cursor --session-id <existing-provider-id> --worktree <directory> [--delivery auto|direct|inbox] [--message <text>] [--run-id <id>] [--timeout 30m] [--replace] [--retry] [--dry-run]
   Persist the task assignment, then try an exact-session provider CLI delivery. Auto mode queues the task in the session inbox when delivery cannot begin safely. Once a provider process starts, an unclear outcome requires reconciliation; it is never silently resent. Codex uses its queue command; Claude Code and Cursor resume by ID in non-interactive mode.
+`,
+	"wakeup configure": `hp wakeup configure --project <directory> (--every <duration>|--cron '<five fields>' --timezone <IANA zone>) --worktree <project-relative-directory> --prompt-file <project-relative-file> [--enable|--disable] [--dry-run]
+  Save the current Coordinator's schedule in project Git. Requires a separate foreground scheduler process.
+`,
+	"wakeup status": `hp wakeup status --project <directory> [--format json|text]
+  Show the durable schedule, Coordinator assignment, and local execution checkpoint.
+`,
+	"wakeup once": `hp wakeup once --project <directory> [--timeout 30m] [--retry] [--dry-run]
+  Run one wakeup now, even if the schedule is disabled. Inspect uncertain logs before --retry.
+`,
+	"wakeup start": `hp wakeup start --project <directory> [--timeout 30m]
+  Run the foreground scheduler until Ctrl-C. A process supervisor can keep it running.
 `,
 	"context add": `hp context add --project <directory> --id <id> --kind decision|lesson|preference|research --title <title> --from <file|-> [--tags a,b] [--source <reference>] [--dry-run]
   Store one portable project memory record under context/memory/.
@@ -262,7 +285,7 @@ var commandSchemas = map[string]commandSchema{
 	"run get":              {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
 	"run update":           {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"commit", "string", false, nil}, {"changed-files", "string", false, nil}, {"verification", "string", false, nil}, {"logs", "string", false, nil}, {"approval", "string", false, nil}, {"exit-code", "integer", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
 	"agent register":       {"agent register", "Record a project participant and local delivery hint", []flagSchema{{"project", "string", true, nil}, {"harness", "string", true, nil}, {"session-id", "string", true, nil}, {"worktree", "string", false, nil}, {"task-id", "string", false, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"modules", "string", false, nil}, {"capabilities", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent register --project ./my-project --harness codex --session-id <provider-id> --modules api --capabilities go,testing"}},
-	"agent discover":       {"agent discover", "Find all registered project participants", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"module", "string", false, nil}, {"capability", "string", false, nil}, {"include-stale", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent discover --project ./my-project --module api --json"}},
+	"agent discover":       {"agent discover", "Find all registered project participants", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"module", "string", false, nil}, {"capability", "string", false, nil}, {"role", "enum", false, []string{"coordinator"}}, {"include-stale", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent discover --project ./my-project --role coordinator --json"}},
 	"agent get":            {"agent get", "Read an agent session registration", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent get --project ./my-project --id <registration-id>"}},
 	"agent heartbeat":      {"agent heartbeat", "Renew a local delivery hint", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent heartbeat --project ./my-project --id <registration-id> --availability available"}},
 	"agent unregister":     {"agent unregister", "End a local delivery hint", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent unregister --project ./my-project --id <registration-id>"}},
@@ -275,7 +298,14 @@ var commandSchemas = map[string]commandSchema{
 	"worktree get":         {"worktree get", "Read a project worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree get --project ./my-project --id api-task --json"}},
 	"worktree remove":      {"worktree remove", "Remove a Git worktree", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"force", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp worktree remove --project ./my-project --id api-task --force"}},
 	"coordinator plan":     {"coordinator plan", "Compute dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator plan --project ./my-project --json"}},
+	"coordinator assign":   {"coordinator assign", "Designate one registered Coordinator", []flagSchema{{"project", "string", true, nil}, {"registration-id", "string", true, nil}, {"replace", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator assign --project ./my-project --registration-id <id>"}},
+	"coordinator get":      {"coordinator get", "Read the current Coordinator and term history", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator get --project ./my-project"}},
+	"coordinator clear":    {"coordinator clear", "End the current Coordinator term", []flagSchema{{"project", "string", true, nil}, {"registration-id", "string", true, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator clear --project ./my-project --registration-id <id>"}},
 	"coordinator dispatch": {"coordinator dispatch", "Assign and deliver a ready task to an exact provider session", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", true, nil}, {"harness", "enum", true, []string{"codex", "claude-code", "cursor"}}, {"session-id", "string", true, nil}, {"worktree", "string", true, nil}, {"delivery", "enum", false, []string{"auto", "direct", "inbox"}}, {"message", "string", false, nil}, {"run-id", "string", false, nil}, {"timeout", "duration", false, nil}, {"replace", "boolean", false, nil}, {"retry", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp coordinator dispatch --project ./my-project --task-id inventory-api --harness codex --session-id <provider-id> --worktree ./repos/api --dry-run"}},
+	"wakeup configure":     {"wakeup configure", "Save a Coordinator wakeup schedule", []flagSchema{{"project", "string", true, nil}, {"every", "duration", false, nil}, {"cron", "string", false, nil}, {"timezone", "string", false, nil}, {"worktree", "string", false, nil}, {"prompt-file", "string", false, nil}, {"enable", "boolean", false, nil}, {"disable", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp wakeup configure --project ./my-project --every 30m --worktree repos/api --prompt-file agents/coordinator-wakeup.md"}},
+	"wakeup status":        {"wakeup status", "Read schedule and local execution state", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp wakeup status --project ./my-project"}},
+	"wakeup once":          {"wakeup once", "Run one Coordinator wakeup", []flagSchema{{"project", "string", true, nil}, {"timeout", "duration", false, nil}, {"retry", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp wakeup once --project ./my-project --dry-run"}},
+	"wakeup start":         {"wakeup start", "Run the foreground Coordinator wakeup scheduler", []flagSchema{{"project", "string", true, nil}, {"timeout", "duration", false, nil}}, []string{"hp wakeup start --project ./my-project"}},
 	"context add":          {"context add", "Store a portable project memory", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"kind", "enum", true, model.MemoryKinds()}, {"title", "string", true, nil}, {"from", "string", true, nil}, {"tags", "string", false, nil}, {"source", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context add --project ./my-project --id api-decision --kind decision --title 'API design' --from ./decision.md"}},
 	"context list":         {"context list", "List project memories", []flagSchema{{"project", "string", true, nil}, {"kind", "enum", false, model.MemoryKinds()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context list --project ./my-project --json"}},
 	"context get":          {"context get", "Read one project memory", []flagSchema{{"project", "string", true, nil}, {"kind", "enum", true, model.MemoryKinds()}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp context get --project ./my-project --kind decision --id api-decision"}},

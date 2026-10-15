@@ -167,8 +167,22 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.stateUpdate(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
+	case "coordinator assign":
+		return a.coordinatorAssign(args[2:])
+	case "coordinator get":
+		return a.coordinatorGet(args[2:])
+	case "coordinator clear":
+		return a.coordinatorClear(args[2:])
 	case "coordinator dispatch":
 		return a.coordinatorDispatch(args[2:])
+	case "wakeup configure":
+		return a.wakeupConfigure(args[2:])
+	case "wakeup status":
+		return a.wakeupStatus(args[2:])
+	case "wakeup once":
+		return a.wakeupOnce(args[2:])
+	case "wakeup start":
+		return a.wakeupStart(args[2:])
 	case "schema list":
 		return a.schemaList(args[2:])
 	case "schema get":

@@ -93,7 +93,8 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"goals/README.md":                        []byte("# Goals\n\nRecord long-lived project outcomes, constraints, and acceptance criteria here. A goal may span many tasks and runs.\n\nUse Markdown for the explanation: problem, outcome, scope, doneWhen conditions, and evidence required. YAML frontmatter MAY carry stable metadata such as id, status, owner, and method. A matching JSON file is a machine-readable index for filtering and joins; OKR, milestones, experiments, and metrics are optional methods.\n"),
 		"tasks/README.md":                        []byte("# Tasks\n\nStore task records and dependency metadata here. A task may have multiple execution runs.\n"),
 		"runs/README.md":                         []byte("# Runs\n\nStore execution attempts, status transitions, inputs, outputs, and provider references here.\n"),
-		"agents/README.md":                       []byte("# Agents\n\nRecord durable provider-neutral Agent roles and their execution adapter configuration here. Session participation records live in `agents/sessions/` and remain discoverable. `hp agent register` records participation; `hp agent discover` lists it. Machine-local direct-delivery hints live under `.harness-project/agent-sessions/` and may expire or be ended without deleting participation.\n"),
+		"agents/README.md":                       []byte("# Agents\n\nSession participation records live in `agents/sessions/` and remain discoverable. The current Coordinator and assignment history live in `agents/coordinator.json`; assign a registered session with `hp coordinator assign`. Its optional tracked schedule lives in `agents/coordinator-wakeup.json`, and its editable routine in `agents/coordinator-wakeup.md`. `hp wakeup start` runs a foreground scheduler; local execution state and logs remain under ignored `artifacts/`. Machine-local direct-delivery hints live under `.harness-project/agent-sessions/` and may expire without deleting participation.\n"),
+		"agents/coordinator-wakeup.md":           []byte("# Coordinator wakeup routine\n\n1. Read the current goal, plan, latest work log, and assigned task inbox.\n2. Check for ready tasks, blockers, and work that needs a handoff.\n3. Continue the highest priority authorized work and record meaningful progress in a work log.\n4. If there is nothing actionable, report that briefly; do not invent work.\n"),
 		"context/README.md":                      []byte("# Context and memory\n\nStore durable research, project knowledge, and indexed context sources here.\n"),
 		"handoffs/README.md":                     []byte("# Handoffs\n\nAdd one dated Markdown file per handoff. Include the goal, completed work, next actions, repository branches and commits, verification, and blockers. Do not overwrite previous handoffs.\n"),
 		"events/README.md":                       []byte("# Events\n\nRecord incoming events and trigger definitions here. Event processing must be idempotent.\n"),
@@ -111,6 +112,8 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		".harness-project/project.json":          append(manifest, '\n'),
 		".cursor/rules/harness-project.mdc":      []byte("---\ndescription: Shared Harness Project context\nalwaysApply: true\n---\n\nRead `AGENTS.md` and `PROJECT.md` before work. Use `state/current-plan.md`, `spec/`, and `handoffs/` for portable project context.\n"),
 	}
+	files["AGENTS.md"] = append(files["AGENTS.md"], []byte("\nThe current Coordinator is an explicit project role, not a capability label or an online status. Check `hp coordinator get --project .` before acting as Coordinator. Assign a registered session with `hp coordinator assign --project . --registration-id <id>`; use `--replace` for a handoff. If `hp wakeup status --project .` shows an enabled schedule, the foreground `hp wakeup start --project .` process delivers the routine in `agents/coordinator-wakeup.md` to the current session. Inspect uncertain delivery logs before any manual `hp wakeup once --retry`.\n")...)
+	files["skills/shared/project-context/SKILL.md"] = append(files["skills/shared/project-context/SKILL.md"], []byte("\n7. Check `hp coordinator get --project .` for the current Coordinator. A Coordinator may configure `hp wakeup` with an interval or cron schedule and run the foreground scheduler; the role is explicit and transferable. Inspect `hp wakeup status` and delivery logs before retrying an uncertain wakeup.\n")...)
 	result.Changes = append(result.Changes, Action{Operation: "create_directory", Path: root})
 	for _, dir := range directories {
 		result.Changes = append(result.Changes, Action{Operation: "create_directory", Path: filepath.Join(root, dir)})
@@ -131,7 +134,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 
 var fileOrder = []string{
 	"PROJECT.md", "AGENTS.md", "CLAUDE.md", "spec/README.md", "goals/README.md",
-	"tasks/README.md", "runs/README.md", "agents/README.md", "context/README.md",
+	"tasks/README.md", "runs/README.md", "agents/README.md", "agents/coordinator-wakeup.md", "context/README.md",
 	"handoffs/README.md", "events/README.md", "verification/README.md", "worklogs/README.md", "archive/README.md",
 	"skills/shared/project-context/SKILL.md", "scripts/shared/README.md", "repos/README.md",
 	"state/status.md", "state/current-plan.md", "state/project-state.json", "artifacts/README.md", "integrations/README.md",

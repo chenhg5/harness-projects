@@ -1,16 +1,38 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/chenhg5/harness-projects/internal/cleanup"
+	"github.com/chenhg5/harness-projects/internal/coordinator"
 	"github.com/chenhg5/harness-projects/internal/participants"
 	"github.com/chenhg5/harness-projects/internal/presence"
 	"github.com/chenhg5/harness-projects/internal/store"
 )
+
+type participantView struct {
+	participants.Session
+	Role string `json:"role,omitempty"`
+}
+
+func currentCoordinatorID(root string) (string, error) {
+	role, err := (coordinator.RoleStore{Root: root}).Get()
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if role.Current == nil {
+		return "", nil
+	}
+	return role.Current.RegistrationID, nil
+}
 
 func (a app) agentRegister(args []string) int {
 	fs := newFlags("agent register")
@@ -105,6 +127,7 @@ func (a app) agentDiscover(args []string) int {
 	harness := fs.String("harness", "", "filter by harness")
 	module := fs.String("module", "", "filter by module")
 	capability := fs.String("capability", "", "filter by capability")
+	role := fs.String("role", "", "filter by current project role: coordinator")
 	_ = fs.Bool("include-stale", false, "deprecated; durable discovery always includes participants")
 	format, jsonFlag := outputFlags(fs)
 	if err := parse(fs, args); err != nil {
@@ -112,6 +135,9 @@ func (a app) agentDiscover(args []string) int {
 	}
 	if *projectPath == "" {
 		return a.parseError(fmt.Errorf("--project is required"))
+	}
+	if *role != "" && *role != "coordinator" {
+		return a.parseError(fmt.Errorf("--role must be coordinator"))
 	}
 	selectedHarness := ""
 	if *harness != "" {
@@ -131,15 +157,27 @@ func (a app) agentDiscover(args []string) int {
 	if err != nil {
 		return a.operationError(err, *projectPath)
 	}
+	coordinatorID, err := currentCoordinatorID(s.Root)
+	if err != nil {
+		return a.operationError(err, s.Root)
+	}
+	views := make([]participantView, 0, len(items))
 	lines := make([]string, 0, len(items))
 	for _, item := range items {
-		lines = append(lines, fmt.Sprintf("%s %s %s — %s", item.ID, item.Harness, item.SessionID, item.Focus))
+		view := participantView{Session: item}
+		if item.ID == coordinatorID {
+			view.Role = "coordinator"
+		} else if *role != "" {
+			continue
+		}
+		views = append(views, view)
+		lines = append(lines, fmt.Sprintf("%s %s %s %s — %s", item.ID, item.Harness, item.SessionID, view.Role, item.Focus))
 	}
-	human := fmt.Sprintf("%d agent session(s)", len(items))
+	human := fmt.Sprintf("%d agent session(s)", len(views))
 	if len(lines) > 0 {
 		human += "\n" + strings.Join(lines, "\n")
 	}
-	a.emit(items, human, selectedFormat(*format, *jsonFlag, a.out))
+	a.emit(views, human, selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
 
@@ -162,7 +200,15 @@ func (a app) agentGet(args []string) int {
 	if err != nil {
 		return a.operationError(err, *id)
 	}
-	a.emit(item, item.Harness+" / "+item.SessionID, selectedFormat(*format, *jsonFlag, a.out))
+	coordinatorID, err := currentCoordinatorID(s.Root)
+	if err != nil {
+		return a.operationError(err, s.Root)
+	}
+	view := participantView{Session: item}
+	if item.ID == coordinatorID {
+		view.Role = "coordinator"
+	}
+	a.emit(view, item.Harness+" / "+item.SessionID+" / "+view.Role, selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
 

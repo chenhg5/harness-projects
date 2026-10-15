@@ -92,6 +92,21 @@ hp coordinator dispatch --project . --task-id improve-api \
 
 目标会话也可以运行 `hp task inbox --project . --harness claude-code --session-id "$SESSION_ID"` 自行发现任务。Claude Code 会话仍在运行时，CLI 可能把任务留在 inbox，而不另开进程恢复会话。Provider CLI 成功退出**不会自动把任务标记完成**；仍需按验收条件记录证据。如果进程可能已经收到 prompt，但没有明确结果，Run 会标记为 `uncertain`，不会自动重试。
 
+### Coordinator 角色与定时唤醒
+
+可以从已登记的 Agent session 中指定一位当前 Coordinator，并按间隔或日历时间定时唤醒这个角色：
+
+```bash
+hp coordinator assign --project . --registration-id <registration-id>
+hp agent discover --project . --role coordinator
+hp wakeup configure --project . --every 30m \
+  --worktree repos/api --prompt-file agents/coordinator-wakeup.md
+hp wakeup once --project . --dry-run
+hp wakeup start --project .
+```
+
+角色指派和计划随项目进入 Git；用 `hp coordinator assign --replace` 交接后，计划会指向新的 session。调度器以前台进程运行，执行进度和日志留在本机。若无法确认消息是否送达，会暂停自动重试。Cron、运行方式和安全边界见 [CLI 文档](docs/cli.md)。
+
 ## 现有能力
 
 | 能力 | `hp` 当前支持 |
@@ -99,12 +114,12 @@ hp coordinator dispatch --project . --task-id improve-api \
 | 项目工作空间 | 独立 Git 项目的创建与校验、文件操作、跨 Harness 入口 |
 | 目标与执行 | 有完成条件的目标、任务依赖、Run、状态快照和验证引用 |
 | 共享上下文 | 可搜索的记忆、工作日志、handoff 和项目上下文 Skill |
-| Agent 协作 | 持久会话参与记录和发现、准确会话的任务 inbox，以及面向 Codex、Claude Code、Cursor 的 CLI 投递 |
+| Agent 协作 | 持久会话参与记录、可交接的 Coordinator 角色、准确会话的 inbox 和 CLI 投递、可选定时唤醒 |
 | 源码仓库 | 仓库登记和 `repos/` 下的本地 Git worktree 生命周期 |
 | 可视化 | 只读本地看板，支持英语和简体中文 |
 | 日常维护 | dry-run、结构化 JSON 输出、临时文件清理 |
 
-目前 Harness Projects 以**本地运行**为主。远程 Runner、事件触发、无人值守调度和审批流程仍在规划中；[能力地图](docs/capability-map.md)区分了已经实现的 CLI 能力与产品目标。不同 Harness 的会话仍由各自的 Provider 管理；跨 Harness 接力依靠共享项目文件，而不是某个工具的私有聊天记录。
+目前 Harness Projects 以**本地运行**为主。远程 Runner、外部事件触发、托管式后台调度和审批流程仍在规划中；[能力地图](docs/capability-map.md)区分了已经实现的 CLI 能力与产品目标。不同 Harness 的会话仍由各自的 Provider 管理；跨 Harness 接力依靠共享项目文件，而不是某个工具的私有聊天记录。
 
 ## 项目目录
 
@@ -119,6 +134,8 @@ my-project/              # 独立的 Git 仓库
 ├── tasks/               # 任务依赖和分配
 ├── runs/                # 执行尝试与证据
 ├── agents/sessions/     # 持久会话参与记录
+├── agents/coordinator.json # 当前 Coordinator 与交接历史
+├── agents/coordinator-wakeup.md # 可编辑的唤醒工作指令
 ├── context/             # 可搜索的项目记忆
 ├── worklogs/            # 每次会话的工作记录
 ├── handoffs/            # 继续工作的说明

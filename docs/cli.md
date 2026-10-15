@@ -47,6 +47,14 @@ hp agent register --project ./my-project --harness codex \
   --session-id <actual-provider-session-id> --modules api,coordinator \
   --capabilities go,testing --focus "Implement API"
 hp agent discover --project ./my-project --module api
+hp coordinator assign --project ./my-project --registration-id <registration-id>
+hp coordinator get --project ./my-project
+hp agent discover --project ./my-project --role coordinator
+hp wakeup configure --project ./my-project --every 30m \
+  --worktree repos/api --prompt-file agents/coordinator-wakeup.md
+hp wakeup status --project ./my-project
+hp wakeup once --project ./my-project --dry-run
+hp wakeup start --project ./my-project
 hp agent heartbeat --project ./my-project --id <registration-id> \
   --availability available
 hp agent unregister --project ./my-project --id <registration-id>
@@ -96,6 +104,35 @@ Git. They do not expire or carry an online/offline state. `hp agent discover`
 returns all registered participants; `--include-stale` is accepted for
 compatibility but is now a no-op. The actual session must register; old local
 leases cannot establish historical participation by themselves.
+
+## Coordinator and scheduled wakeups
+
+`hp coordinator assign` designates exactly one registered session as the
+project's current Coordinator. Use `--replace` for an explicit handoff; the
+assignment history stays in `agents/coordinator.json`. `hp coordinator clear`
+ends the current term without removing that session's participation record.
+Discovery marks the current Coordinator and accepts `--role coordinator`.
+
+The optional wakeup schedule follows the **role**, so a handoff changes the
+target session without rewriting the schedule. Configure either an interval
+(`--every 30m`) or a five-field cron expression with an IANA time zone, for
+example `--cron '0 9 * * 1-5' --timezone Asia/Shanghai`. The project-relative
+worktree must match the Coordinator's registered worktree. Edit the Markdown
+routine at `agents/coordinator-wakeup.md` to state what the Coordinator should
+check and do at each wakeup. `hp wakeup once` tests one wakeup; `hp wakeup
+start` runs a foreground scheduler until stopped. Keep that process running
+with a process supervisor if persistent scheduling is wanted. Configuration is
+tracked in Git; local checkpoint and bounded delivery logs live under ignored
+`artifacts/`.
+
+Wakeups always address an existing provider session ID through its CLI.
+Codex uses `codex queue`; Claude Code is probed for an active session before a
+separate resume; Cursor additionally requires a current local delivery hint.
+If preflight fails, the wakeup is locally `queued` for another attempt. If a
+provider process starts but delivery cannot be confirmed, the status is
+`uncertain` and automatic retries stop. Inspect the logs shown by `hp wakeup
+status` before `hp wakeup once --retry`. No scheduler is started by project
+initialization, and a session registration alone does not create a wakeup.
 
 Machine-local direct-delivery hints live under `.harness-project/agent-sessions/`
 and are ignored by Git. They expire after two hours by default. `hp agent

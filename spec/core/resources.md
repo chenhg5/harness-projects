@@ -7,6 +7,10 @@ per resource:
 goals/<goal-id>.json
 tasks/<task-id>.json
 runs/<run-id>.json
+agents/sessions/<registration-id>.json
+agents/coordinator.json
+agents/coordinator-wakeup.json
+agents/coordinator-wakeup.md
 .harness-project/repositories/<repository-id>.json
 .harness-project/worktrees/<worktree-id>.json
 ```
@@ -52,6 +56,26 @@ delivery. Delivery statuses are `queued`, `sending`, `accepted`, `completed`,
 `failed`, and `uncertain`. `accepted` means the provider accepted a message;
 it does not establish task completion. Provider logs may remain local under
 `artifacts/dispatch/`; a run must retain their paths for inspection.
+
+## Coordinator role and wakeup
+
+`agents/coordinator.json` identifies at most one current Coordinator by a
+registered participant ID. Reassigning an occupied role MUST be explicit and
+MUST retain the previous term with an end time. Ending the role MUST NOT
+delete that participant's registration. `hp agent discover` MAY annotate the
+current role; participation itself does not imply this role or online status.
+
+`agents/coordinator-wakeup.json` MAY define one schedule for the current
+Coordinator. It contains either a bounded interval or a five-field cron
+expression with an IANA time zone, a project-relative execution worktree, and
+a project-relative Markdown routine. It MUST NOT pin a provider session ID:
+the current role determines the target. A scheduler MUST verify that the
+target session's registered worktree matches the configured worktree before
+delivery. A direct delivery MUST address the exact existing session. If the
+outcome may have reached the provider but cannot be confirmed, automatic
+retry MUST stop until the logs are inspected and a retry is explicitly
+requested. Local scheduler checkpoints and provider logs SHOULD remain
+outside project Git.
 
 ## State snapshot
 

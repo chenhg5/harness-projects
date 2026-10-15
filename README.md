@@ -92,6 +92,27 @@ hp coordinator dispatch --project . --task-id improve-api \
 
 The target session can inspect its assigned work with `hp task inbox --project . --harness claude-code --session-id "$SESSION_ID"`. An active Claude Code session may be queued for inbox discovery instead of resumed by a second process. A provider CLI result does **not** complete the task automatically; acceptance still needs evidence. If a process may have received the prompt but returns no clear result, the run is marked `uncertain` and is never resent automatically.
 
+### Coordinator role and scheduled wakeups
+
+Designate one registered session as the current Coordinator, then optionally
+configure a routine that wakes that role at an interval or calendar time:
+
+```bash
+hp coordinator assign --project . --registration-id <registration-id>
+hp agent discover --project . --role coordinator
+hp wakeup configure --project . --every 30m \
+  --worktree repos/api --prompt-file agents/coordinator-wakeup.md
+hp wakeup once --project . --dry-run
+hp wakeup start --project .
+```
+
+The Coordinator assignment and schedule are Git-tracked project files. A role
+handoff uses `hp coordinator assign --replace`; the schedule follows the new
+session. The scheduler runs in the foreground and keeps its delivery checkpoint
+locally. It addresses an existing session through its provider CLI and pauses
+automatic retries when the outcome is uncertain. See the [CLI guide](docs/cli.md)
+for cron, safety, and operation details.
+
 ## What works today
 
 | Capability | Available in `hp` |
@@ -99,12 +120,12 @@ The target session can inspect its assigned work with `hp task inbox --project .
 | Project workspace | Git-backed project initialization, validation, file access, and shared harness entry points |
 | Goals and work | Outcome-oriented goals, task dependencies, run records, state snapshots, and verification references |
 | Shared context | Searchable memory records, work logs, handoffs, and project-context skills |
-| Agent coordination | Durable session participation and discovery, exact-session task inbox, CLI dispatch to Codex, Claude Code, and Cursor |
+| Agent coordination | Durable participation, a transferable Coordinator role, exact-session inbox and CLI dispatch, and optional scheduled wakeups |
 | Source repositories | Repository registration and local Git worktree lifecycle under `repos/` |
 | Visibility | Read-only local dashboard with English and Simplified Chinese UI |
 | Maintenance | Dry-run support, structured JSON output, and bounded cleanup of transient material |
 
-Harness Projects is **local-first** today. Remote runners, event triggers, unattended scheduling, and approval workflows are planned; the [capability map](docs/capability-map.md) tracks the boundary between the current CLI and the product target. Provider sessions remain provider-specific: cross-harness continuation uses the shared project files, not a shared hidden chat transcript.
+Harness Projects is **local-first** today. Remote runners, external event triggers, managed background scheduling, and approval workflows are planned; the [capability map](docs/capability-map.md) tracks the boundary between the current CLI and the product target. Provider sessions remain provider-specific: cross-harness continuation uses the shared project files, not a shared hidden chat transcript.
 
 ## Project layout
 
@@ -119,6 +140,8 @@ my-project/              # Its own Git repository
 ├── tasks/               # Dependencies and assignments
 ├── runs/                # Attempts and evidence
 ├── agents/sessions/     # Durable session participation
+├── agents/coordinator.json # Current Coordinator and term history
+├── agents/coordinator-wakeup.md # Editable wakeup routine
 ├── context/             # Searchable project memory
 ├── worklogs/            # What each session did
 ├── handoffs/            # Continuation instructions

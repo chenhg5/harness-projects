@@ -216,6 +216,18 @@ func (r Registry) Discover(filter Filter) ([]Session, error) {
 }
 
 func ProjectRelativeWorktree(root, absolute string) string {
+	if absolute == "" {
+		return ""
+	}
+	if relative, err := filepath.Rel(root, absolute); err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return relative
+	}
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		root = resolved
+	}
+	if resolved, err := filepath.EvalSymlinks(absolute); err == nil {
+		absolute = resolved
+	}
 	relative, err := filepath.Rel(root, absolute)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
 		return ""

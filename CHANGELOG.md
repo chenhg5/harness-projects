@@ -2,6 +2,15 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## Unreleased
+
+- Add an explicit, transferable Coordinator role for registered sessions with
+  assignment history and role-aware discovery.
+- Add an optional interval or cron wakeup schedule for the current Coordinator,
+  a foreground scheduler, exact-session CLI delivery, and local retry state.
+- Stop automatic retries when a wakeup may have reached the provider but its
+  outcome cannot be confirmed.
+
 ## v0.0.5 - 2026-10-15
 
 - Persist agent session participation in project Git under `agents/sessions/`.
