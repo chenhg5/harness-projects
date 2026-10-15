@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "v0.0.5"
+var Version = "v0.0.6"
 
 type app struct {
 	in  io.Reader

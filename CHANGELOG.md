@@ -2,7 +2,7 @@
 
 All notable changes to Harness Projects will be documented here.
 
-## Unreleased
+## v0.0.6 - 2026-10-16
 
 - Add an explicit, transferable Coordinator role for registered sessions with
   assignment history and role-aware discovery.
