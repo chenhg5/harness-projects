@@ -36,6 +36,14 @@ hp task create --project ./my-project --id inventory-api \
 hp task ready --project ./my-project --format json
 hp run create --project ./my-project --id run-001 --task-id inventory-api
 hp run update --project ./my-project --id run-001 --status running
+hp agent register --project ./my-project --harness codex \
+  --session-id <actual-provider-session-id> --modules api,coordinator \
+  --capabilities go,testing --focus "Implement API"
+hp agent discover --project ./my-project --module api
+hp agent heartbeat --project ./my-project --id <registration-id> \
+  --availability available
+hp agent unregister --project ./my-project --id <registration-id>
+hp agent prune --project ./my-project --older-than 7d --dry-run
 hp state validate --project ./my-project
 hp repository add --project ./my-project --id api --path ../api --default-branch main
 hp worktree create --project ./my-project --id api-task --repository-id api
@@ -66,6 +74,25 @@ transfers and may include branch, commit, and blocker details. Cleanup only
 selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
 the default action archives them under `archive/` and never selects durable
 project history.
+
+## Agent session discovery
+
+At the start of work, an agent should register its actual provider session ID
+with `hp agent register`. `cc` is accepted as an alias for `claude-code`.
+Agents can describe their current focus, modules, capabilities, worktree, and
+task. The registration command returns a registration ID for `heartbeat`,
+`get`, and `unregister`. `hp agent discover` returns JSON by default for other
+agents to filter by harness, module, or capability.
+
+Registrations are machine-local leases under `.harness-project/agent-sessions/`
+and are ignored by Git. The default lease lasts two hours. An agent should
+renew it after meaningful work, and unregister when it leaves the project.
+Expired entries are hidden by default; use `--include-stale` to inspect them.
+Use `hp agent prune` to remove records that have stayed expired for a chosen
+period; the default is seven days.
+Presence is self-reported and does not guarantee that a session is running or
+can receive a message. Cross-harness handoffs still use project files, while
+CLI dispatch requires an explicitly selected provider session.
 
 ## Local dashboard
 

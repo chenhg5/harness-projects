@@ -14,6 +14,7 @@ Commands:
   goal create|list|get|update     Manage long-lived project goals
   task create|list|get|update|ready Manage dependent work items
   run create|list|get|update      Manage execution attempts
+  agent register|discover|get|heartbeat|unregister|prune Discover agent sessions
   repository add|list|get         Register participating code repositories
   worktree create|list|get|remove Manage isolated Git worktrees
   context add|list|get|search     Manage portable project memory
@@ -35,6 +36,7 @@ var groupHelp = map[string]string{
 	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
 	"task":        "Task commands: create, list, get, update, ready\nExample: hp task ready --project ./my-project\n",
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
+	"agent":       "Agent commands: register, discover, get, heartbeat, unregister, prune\nExample: hp agent discover --project ./my-project\n",
 	"repository":  "Repository commands: add, list, get\nExample: hp repository add --project ./my-project --id api --path ../api\n",
 	"worktree":    "Worktree commands: create, list, get, remove\nExample: hp worktree create --project ./my-project --id api-task --repository-id api\n",
 	"context":     "Context commands: add, list, get, search\nExample: hp context search --project ./my-project --query architecture\n",
@@ -113,6 +115,24 @@ var commandHelp = map[string]string{
 `,
 	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--commit <sha>] [--changed-files a,b] [--verification a,b] [--logs a,b] [--error <message>] [--dry-run]
   Update run state and record timestamps for terminal states.
+`,
+	"agent register": `hp agent register --project <directory> --harness <name> --session-id <provider-id> [--worktree <path>] [--task-id <id>] [--availability available|busy|paused] [--focus <text>] [--modules a,b] [--capabilities a,b] [--ttl 2h] [--dry-run]
+  Register this live provider session for discovery. cc is an alias for claude-code. The CLI cannot infer your session ID.
+`,
+	"agent discover": `hp agent discover --project <directory> [--harness <name>] [--module <name>] [--capability <name>] [--include-stale] [--format json|text]
+  Find registered agent sessions. Expired registrations are hidden unless --include-stale is set.
+`,
+	"agent get": `hp agent get --project <directory> --id <registration-id> [--format json|text]
+  Read one agent session registration.
+`,
+	"agent heartbeat": `hp agent heartbeat --project <directory> --id <registration-id> [--availability available|busy|paused] [--focus <text>] [--ttl 2h] [--dry-run]
+  Renew an agent session registration after meaningful work or while waiting for more tasks.
+`,
+	"agent unregister": `hp agent unregister --project <directory> --id <registration-id> [--dry-run]
+  Remove an agent session registration when the session leaves this project.
+`,
+	"agent prune": `hp agent prune --project <directory> [--older-than 7d] [--dry-run] [--format json|text]
+  Remove registrations whose lease expired at least this long ago.
 `,
 	"repository add": `hp repository add --project <directory> --id <id> [--url <url>] [--path <local-git-repository>] [--default-branch <branch>] [--provider <name>] [--if-not-exists] [--dry-run]
   Register a repository used by this project. Registration never clones or changes the repository.
@@ -226,6 +246,12 @@ var commandSchemas = map[string]commandSchema{
 	"run list":         {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
 	"run get":          {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
 	"run update":       {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"commit", "string", false, nil}, {"changed-files", "string", false, nil}, {"verification", "string", false, nil}, {"logs", "string", false, nil}, {"approval", "string", false, nil}, {"exit-code", "integer", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
+	"agent register":   {"agent register", "Register a live agent session", []flagSchema{{"project", "string", true, nil}, {"harness", "string", true, nil}, {"session-id", "string", true, nil}, {"worktree", "string", false, nil}, {"task-id", "string", false, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"modules", "string", false, nil}, {"capabilities", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent register --project ./my-project --harness codex --session-id <provider-id> --modules api --capabilities go,testing"}},
+	"agent discover":   {"agent discover", "Find active agent sessions", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"module", "string", false, nil}, {"capability", "string", false, nil}, {"include-stale", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent discover --project ./my-project --module api --json"}},
+	"agent get":        {"agent get", "Read an agent session registration", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent get --project ./my-project --id <registration-id>"}},
+	"agent heartbeat":  {"agent heartbeat", "Renew an agent session registration", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent heartbeat --project ./my-project --id <registration-id> --availability available"}},
+	"agent unregister": {"agent unregister", "Remove an agent session registration", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent unregister --project ./my-project --id <registration-id>"}},
+	"agent prune":      {"agent prune", "Remove old expired agent session registrations", []flagSchema{{"project", "string", true, nil}, {"older-than", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent prune --project ./my-project --older-than 7d --dry-run"}},
 	"repository add":   {"repository add", "Register a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"url", "string", false, nil}, {"path", "string", false, nil}, {"default-branch", "string", false, nil}, {"provider", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository add --project ./my-project --id api --path ../api"}},
 	"repository list":  {"repository list", "List project repositories", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository list --project ./my-project --json"}},
 	"repository get":   {"repository get", "Read a project repository", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp repository get --project ./my-project --id api --json"}},

@@ -22,6 +22,8 @@ verification, and harness adapters.
 - Run work through Claude Code, Cursor, Codex, and other execution backends.
 - Preserve project memory, decisions, research, plans, work logs, handoffs, and
   inspectable evidence.
+- Let active agents register their provider sessions, responsibilities, and
+  capabilities so other agents can discover them.
 - Isolate repository worktrees and execution environments for each run.
 - React to human requests, pull requests, CI results, issue events, and
   schedules.
@@ -118,7 +120,8 @@ The repository is in the foundation phase. The current CLI can create and
 validate the project file structure, safely read or write project files, persist
 goals, tasks, runs, portable memory records, and handoffs, compute a local
 Coordinator plan, register repositories, and create or remove local Git
-worktrees. The next runtime capabilities are:
+worktrees. Agents can register and discover local session presence with bounded
+leases. The next runtime capabilities are:
 
 1. Project goals, instructions, measurable key results, memory, and evidence;
 2. Repository clone, remote branch, and execution backend adapters;
@@ -138,6 +141,9 @@ The reference CLI is written in Go and is called `hp`:
 go build -o ./bin/hp ./cmd/hp
 ./bin/hp project init --path ./my-project --name "My Project"
 ./bin/hp project validate --path ./my-project --format json
+./bin/hp agent register --project ./my-project --harness codex \
+  --session-id "$CODEX_THREAD_ID" --modules api --capabilities go,testing
+./bin/hp agent discover --project ./my-project --module api
 ./bin/hp worklog create --project ./my-project --id session-001 --agent codex \
   --objective 'Implement a feature' --completed 'Added the code' \
   --remaining 'Add review' --next 'Run tests'
@@ -145,6 +151,9 @@ go build -o ./bin/hp ./cmd/hp
 ./bin/hp state validate --project ./my-project
 ./bin/hp project serve --path ./my-project --open
 ```
+
+The registration example uses `CODEX_THREAD_ID` where that environment
+variable is available. Agents must use their actual provider session ID.
 
 `hp project serve` opens a local, read-only dashboard for goals, task progress,
 project state, repositories, and recent agent activity. Its interface supports

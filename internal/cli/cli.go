@@ -103,6 +103,18 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.runGet(args[2:])
 	case "run update":
 		return a.runUpdate(args[2:])
+	case "agent register":
+		return a.agentRegister(args[2:])
+	case "agent discover":
+		return a.agentDiscover(args[2:])
+	case "agent get":
+		return a.agentGet(args[2:])
+	case "agent heartbeat":
+		return a.agentHeartbeat(args[2:])
+	case "agent unregister":
+		return a.agentUnregister(args[2:])
+	case "agent prune":
+		return a.agentPrune(args[2:])
 	case "repository add":
 		return a.repositoryAdd(args[2:])
 	case "repository list":

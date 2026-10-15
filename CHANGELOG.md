@@ -21,3 +21,5 @@ All notable changes to Harness Projects will be documented here.
 - Added bounded project cleanup with safe archival and explicit forced deletion.
 - Added the cross-harness `harness-projects` skill plus release installation,
   multi-platform Makefile archives, checksum generation, and `INSTALL.md`.
+- Added local agent session registration and discovery with capability filters,
+  expiring leases, stale pruning, and project entry-point instructions.

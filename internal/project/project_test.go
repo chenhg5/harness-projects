@@ -1,6 +1,7 @@
 package project
 
 import (
+	"bytes"
 	"path/filepath"
 	"testing"
 	"time"
@@ -38,5 +39,20 @@ func TestInitRequiresIfNotExists(t *testing.T) {
 	}
 	if plan, _, err := PlanInit(root, "Demo", true, time.Now()); err != nil || plan.Created {
 		t.Fatalf("expected idempotent init, plan=%#v err=%v", plan, err)
+	}
+}
+
+func TestInitPromptsAgentSessionRegistration(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	_, files, err := PlanInit(root, "Demo", false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"AGENTS.md", "skills/shared/project-context/SKILL.md"} {
+		for _, command := range []string{"hp agent register", "hp agent discover"} {
+			if !bytes.Contains(files[path], []byte(command)) {
+				t.Fatalf("%s does not instruct agents to run %q", path, command)
+			}
+		}
 	}
 }

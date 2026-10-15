@@ -10,6 +10,7 @@ a claim that every feature is implemented today.
 | Shared project context | Context files, searchable memory records, and handoffs | Indexed context, retrieval, freshness, and memory updates | `ContextStore` |
 | Task decomposition | Task JSON resources and dependency readiness | Task graph with dependencies and parallel branches | `TaskGraph` |
 | Coordinator | Local readiness plan | Plan, route, observe, aggregate, replan | `Coordinator` |
+| Agent discovery | Local session registration, lease renewal, capability filters, and stale pruning | Discover reachable agents across machines and supported transports | `AgentPresence` |
 | Execution sessions | Run JSON resources | Resumable runs and provider threads | `Run` and `Thread` |
 | Claude Code integration | Generated entry files only | Thread/session adapter | `ExecutionAdapter` |
 | Cursor integration | Generated rule file only | Project and Agent adapter | `ExecutionAdapter` |
