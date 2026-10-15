@@ -2,11 +2,13 @@
 
 All notable changes to Harness Projects will be documented here.
 
-## Unreleased
+## v0.0.4 - 2026-10-15
 
 - Added `hp coordinator dispatch` for explicit-session CLI delivery to Codex,
   Claude Code, and Cursor, with durable task assignment, safe inbox fallback,
   local session locking, run outcomes, and bounded diagnostic logs.
+- Rebuilt the English README around a quick start, capability overview, and
+  cross-harness workflow; added a Simplified Chinese README.
 
 ## v0.0.3 - 2026-10-15
 

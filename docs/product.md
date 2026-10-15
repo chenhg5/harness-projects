@@ -52,7 +52,7 @@ routes tasks to execution backends, collects results, requests approval, and
 decides whether to continue, retry, replan, or stop.
 
 Routing starts with durable assignment: a task names a harness and provider
-session ID. The intended Coordinator then tries direct CLI delivery when the
+session ID. The local Coordinator then tries direct CLI delivery when the
 adapter can safely address that session. If delivery cannot start, the task
 stays in the session inbox for the agent to discover later. Assignment alone
 does not imply the recipient has seen or started the task.

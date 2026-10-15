@@ -1,7 +1,7 @@
 APP         := hp
 CMD         := ./cmd/hp
 DIST        := dist
-VERSION     ?= v0.0.3
+VERSION     ?= v0.0.4
 COMMIT      := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 BUILD_TIME  := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
@@ -36,7 +36,7 @@ release-all: clean check
 		$(eval NAME := $(APP)-$(VERSION)-$(GOOS)-$(GOARCH)) \
 		echo "Building $(NAME)" && mkdir -p $(DIST)/$(NAME) && \
 		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(DIST)/$(NAME)/$(APP)$(EXT) $(CMD) && \
-		cp README.md INSTALL.md LICENSE $(DIST)/$(NAME)/ && \
+		cp README.md README.zh-CN.md INSTALL.md LICENSE $(DIST)/$(NAME)/ && \
 		$(if $(EXT),(cd $(DIST) && zip -qr $(NAME).zip $(NAME)),tar -C $(DIST) -czf $(DIST)/$(NAME).tar.gz $(NAME)) && \
 		rm -rf $(DIST)/$(NAME);) true
 	@cd $(DIST) && $(SHA256) *.tar.gz *.zip > checksums.txt

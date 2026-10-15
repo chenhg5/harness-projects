@@ -11,12 +11,12 @@ curl -fsSL https://raw.githubusercontent.com/chenhg5/harness-projects/main/insta
 hp --version
 ```
 
-To install a specific release, set `HP_VERSION` (for example `v0.0.3`). The installer downloads a platform archive and verifies its SHA-256 checksum.
+To install a specific release, set `HP_VERSION` (for example `v0.0.4`). The installer downloads a platform archive and verifies its SHA-256 checksum.
 
 ## Go toolchain
 
 ```bash
-go install github.com/chenhg5/harness-projects/cmd/hp@v0.0.3
+go install github.com/chenhg5/harness-projects/cmd/hp@v0.0.4
 ```
 
 ## Build from source

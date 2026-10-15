@@ -12,9 +12,9 @@ a claim that every feature is implemented today.
 | Coordinator | Local readiness plan, durable assignment, and explicit-session CLI delivery with inbox fallback | Observe remote work, aggregate, replan, and coordinate approvals | `Coordinator` |
 | Agent discovery | Local session registration, lease renewal, capability filters, stale pruning, and task inbox | Discover reachable agents across machines and supported transports | `AgentPresence` |
 | Execution sessions | Run JSON resources | Resumable runs and provider threads | `Run` and `Thread` |
-| Claude Code integration | Generated entry files only | Thread/session adapter | `ExecutionAdapter` |
-| Cursor integration | Generated rule file only | Project and Agent adapter | `ExecutionAdapter` |
-| Codex integration | Generated skill mount only | Session and skill adapter | `ExecutionAdapter` |
+| Claude Code integration | Generated entry files and explicit existing-session CLI resume | Broader Thread/session adapter | `ExecutionAdapter` |
+| Cursor integration | Generated rule file and explicit existing-session CLI resume | Broader Project and Agent adapter | `ExecutionAdapter` |
+| Codex integration | Generated skill mount and explicit-session queue delivery | Broader session and skill adapter | `ExecutionAdapter` |
 | Repository isolation | Repository registration and local Git worktree lifecycle | Clone, remote branch, worktree, environment mapping | `RepositoryAdapter` |
 | Verification | Run/task evidence fields and project state validation | Tests, CI, review, acceptance gates, evidence aggregation | `Verifier` |
 | Handoffs | Manual Markdown records | Structured resumable transfer between runs | `HandoffStore` |
