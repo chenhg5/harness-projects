@@ -2,7 +2,7 @@
 
 `hp` is the reference CLI for creating and maintaining Harness Projects. It
 uses a noun-verb command tree so agents can discover commands incrementally.
-The CLI is the local control plane for the future Coordinator and adapters.
+The CLI is the local control plane for the Coordinator and adapters.
 
 ## Build
 
@@ -38,6 +38,9 @@ hp task assign --project ./my-project --id inventory-api \
   --registration-id <registration-id>
 hp task inbox --project ./my-project --harness codex \
   --session-id <actual-provider-session-id>
+hp coordinator dispatch --project ./my-project --task-id inventory-api \
+  --harness codex --session-id <actual-provider-session-id> \
+  --worktree ./repos/api --dry-run
 hp run create --project ./my-project --id run-001 --task-id inventory-api
 hp run update --project ./my-project --id run-001 --status running
 hp agent register --project ./my-project --harness codex \
@@ -101,11 +104,30 @@ into the task. `hp task inbox` lets the assigned session find active work and
 dependency readiness on its next visit. It does not require a live lease or
 start a provider process. Reassignment requires `--replace`; `hp task
 unassign` clears the current address while retaining assignment history.
-Cross-harness handoffs still use project files. The planned `hp dispatch`
-command will try direct CLI delivery to an explicitly selected session, then
-use the durable assignment as its fallback when delivery cannot begin safely.
-The current CLI implements assignment and inbox discovery; it does not yet
-launch provider CLIs.
+Cross-harness handoffs still use project files. `hp coordinator dispatch`
+records an explicit session assignment and run before trying a provider CLI.
+Codex uses `codex queue --thread <id>`, so a successful CLI exit confirms that
+the message was accepted for the existing session, not that the task is done.
+Claude Code and Cursor run non-interactively with an explicit resume ID and
+their structured result streams. The task is never marked complete solely
+because the provider command exited successfully.
+
+The default `--delivery auto` keeps the task in the target session inbox when
+preflight cannot safely begin delivery, for example when its registration is
+missing, expired, busy for a separate resume, registered to another worktree,
+or its CLI is unavailable. `--delivery direct` reports that case as an error
+while preserving the assignment; `--delivery inbox` deliberately skips the
+provider call. `--dry-run` previews local checks without writing or invoking
+a provider CLI; its `providerProbePending` field signals that Claude Code's
+active-session check still needs to run. The command requires a real existing session ID and a directory
+inside the project. New-session creation is not implemented by this command.
+
+Once a provider process starts, an error or missing terminal result is
+recorded as uncertain delivery. The CLI never automatically resends it.
+Inspect the run and local `artifacts/dispatch/` logs before an intentional
+`--retry`. Logs are local and ignored by the project Git repository. An
+exclusive local lock prevents overlapping `hp` calls to the same session;
+provider processes started outside `hp` are not covered by that lock.
 
 ## Local dashboard
 

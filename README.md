@@ -122,13 +122,14 @@ goals, tasks, runs, portable memory records, and handoffs, compute a local
 Coordinator plan, register repositories, and create or remove local Git
 worktrees. Agents can register and discover local session presence with bounded
 leases. Tasks can be assigned to a provider session and discovered later through
-that session's inbox. Direct CLI delivery to the selected session remains a
-planned capability; the inbox provides the fallback when delivery cannot begin
-safely. The next runtime capabilities are:
+that session's inbox. `hp coordinator dispatch` now attempts direct delivery to
+an explicit Codex, Claude Code, or Cursor session and keeps the task in the
+inbox when delivery cannot begin safely. The next runtime capabilities are:
 
 1. Project goals, instructions, measurable key results, memory, and evidence;
 2. Repository clone, remote branch, and execution backend adapters;
-3. Harness session adapters for Claude Code, Cursor, Codex, and other providers;
+3. Broader provider transports, remote session discovery, and richer session
+   ownership checks;
 4. Coordinator scheduling, retries, approvals, and result aggregation;
 5. Events, subscriptions, schedules, and continuous project operation.
 
@@ -151,6 +152,9 @@ go build -o ./bin/hp ./cmd/hp
   --harness codex --session-id "$CODEX_THREAD_ID"
 ./bin/hp task inbox --project ./my-project --harness codex \
   --session-id "$CODEX_THREAD_ID"
+./bin/hp coordinator dispatch --project ./my-project --task-id inventory-api \
+  --harness codex --session-id "$CODEX_THREAD_ID" \
+  --worktree ./my-project/repos/api --dry-run
 ./bin/hp worklog create --project ./my-project --id session-001 --agent codex \
   --objective 'Implement a feature' --completed 'Added the code' \
   --remaining 'Add review' --next 'Run tests'

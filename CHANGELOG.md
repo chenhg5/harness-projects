@@ -2,6 +2,12 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## Unreleased
+
+- Added `hp coordinator dispatch` for explicit-session CLI delivery to Codex,
+  Claude Code, and Cursor, with durable task assignment, safe inbox fallback,
+  local session locking, run outcomes, and bounded diagnostic logs.
+
 ## v0.0.3 - 2026-10-15
 
 - Added a local project dashboard with section navigation and English and

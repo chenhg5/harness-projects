@@ -81,33 +81,40 @@ type TaskAssignment struct {
 }
 
 type Run struct {
-	SchemaVersion string   `json:"schemaVersion"`
-	ID            string   `json:"id"`
-	TaskID        string   `json:"taskId"`
-	Adapter       string   `json:"adapter"`
-	Harness       string   `json:"harness,omitempty"`
-	AgentID       string   `json:"agentId,omitempty"`
-	Objective     string   `json:"objective,omitempty"`
-	Status        string   `json:"status"`
-	Worktree      string   `json:"worktree,omitempty"`
-	Command       string   `json:"command,omitempty"`
-	Commit        string   `json:"commit,omitempty"`
-	ChangedFiles  []string `json:"changedFiles,omitempty"`
-	Verification  []string `json:"verification,omitempty"`
-	Logs          []string `json:"logs,omitempty"`
-	Approval      string   `json:"approval,omitempty"`
-	ExitCode      *int     `json:"exitCode,omitempty"`
-	Error         string   `json:"error,omitempty"`
-	Artifacts     []string `json:"artifacts,omitempty"`
-	CreatedAt     string   `json:"createdAt"`
-	UpdatedAt     string   `json:"updatedAt"`
-	StartedAt     string   `json:"startedAt,omitempty"`
-	FinishedAt    string   `json:"finishedAt,omitempty"`
+	SchemaVersion      string   `json:"schemaVersion"`
+	ID                 string   `json:"id"`
+	TaskID             string   `json:"taskId"`
+	Adapter            string   `json:"adapter"`
+	Harness            string   `json:"harness,omitempty"`
+	RequestedSessionID string   `json:"requestedSessionId,omitempty"`
+	EffectiveSessionID string   `json:"effectiveSessionId,omitempty"`
+	DeliveryStatus     string   `json:"deliveryStatus,omitempty"`
+	DeliveryReason     string   `json:"deliveryReason,omitempty"`
+	Transport          string   `json:"transport,omitempty"`
+	Summary            string   `json:"summary,omitempty"`
+	AgentID            string   `json:"agentId,omitempty"`
+	Objective          string   `json:"objective,omitempty"`
+	Status             string   `json:"status"`
+	Worktree           string   `json:"worktree,omitempty"`
+	Command            string   `json:"command,omitempty"`
+	Commit             string   `json:"commit,omitempty"`
+	ChangedFiles       []string `json:"changedFiles,omitempty"`
+	Verification       []string `json:"verification,omitempty"`
+	Logs               []string `json:"logs,omitempty"`
+	Approval           string   `json:"approval,omitempty"`
+	ExitCode           *int     `json:"exitCode,omitempty"`
+	Error              string   `json:"error,omitempty"`
+	Artifacts          []string `json:"artifacts,omitempty"`
+	CreatedAt          string   `json:"createdAt"`
+	UpdatedAt          string   `json:"updatedAt"`
+	StartedAt          string   `json:"startedAt,omitempty"`
+	FinishedAt         string   `json:"finishedAt,omitempty"`
 }
 
 var goalStatuses = map[string]bool{"draft": true, "active": true, "completed": true, "archived": true}
 var taskStatuses = map[string]bool{"pending": true, "ready": true, "in_progress": true, "blocked": true, "completed": true, "failed": true, "cancelled": true}
 var runStatuses = map[string]bool{"planned": true, "running": true, "succeeded": true, "failed": true, "paused": true, "cancelled": true}
+var deliveryStatuses = map[string]bool{"queued": true, "sending": true, "accepted": true, "completed": true, "uncertain": true, "failed": true}
 var keyResultStatuses = map[string]bool{"planned": true, "in_progress": true, "achieved": true, "at_risk": true, "missed": true}
 var keyResultDirections = map[string]bool{"increase": true, "decrease": true, "maintain": true, "boolean": true}
 
@@ -264,6 +271,19 @@ func ValidateRun(run Run) error {
 	}
 	if !runStatuses[run.Status] {
 		return fmt.Errorf("invalid run status %q", run.Status)
+	}
+	if run.RequestedSessionID != "" {
+		if err := ValidateProviderSessionID(run.RequestedSessionID); err != nil {
+			return fmt.Errorf("invalid requested session: %w", err)
+		}
+	}
+	if run.EffectiveSessionID != "" {
+		if err := ValidateProviderSessionID(run.EffectiveSessionID); err != nil {
+			return fmt.Errorf("invalid effective session: %w", err)
+		}
+	}
+	if run.DeliveryStatus != "" && !deliveryStatuses[run.DeliveryStatus] {
+		return fmt.Errorf("invalid delivery status %q", run.DeliveryStatus)
 	}
 	if run.Status == "succeeded" && len(run.Verification) == 0 {
 		return fmt.Errorf("succeeded runs require verification evidence")

@@ -46,6 +46,13 @@ MUST include verification evidence. Run statuses are `planned`, `running`,
 The provider-neutral run ID remains stable even when a run is handed from one
 harness adapter to another.
 
+A CLI dispatch run records `requestedSessionId`, `effectiveSessionId` when
+observed, `transport`, `deliveryStatus`, and a reason for queued or uncertain
+delivery. Delivery statuses are `queued`, `sending`, `accepted`, `completed`,
+`failed`, and `uncertain`. `accepted` means the provider accepted a message;
+it does not establish task completion. Provider logs may remain local under
+`artifacts/dispatch/`; a run must retain their paths for inspection.
+
 ## State snapshot
 
 `state/project-state.json` is a materialized control-plane snapshot. It MUST

@@ -40,13 +40,13 @@ tasks whose dependencies are complete and whose status allows work to begin.
 Assignment does not mean that the agent saw, accepted, or started the task.
 The task status, run records, work logs, and verification evidence communicate
 those later stages. `hp task assign` and `hp task inbox` MUST NOT resume or
-launch a provider as a side effect. A separate `hp dispatch` command is the
-planned direct delivery path and MUST follow RFC 0003. Assignment is its
+launch a provider as a side effect. The separate `hp coordinator dispatch`
+command is the direct delivery path and follows RFC 0003. Assignment is its
 durable fallback, not a replacement for CLI delivery.
 
 ## Delivery and fallback
 
-The future Coordinator SHOULD use the following order for an explicitly chosen
+The Coordinator uses the following order for an explicitly chosen
 existing provider session:
 
 1. Persist the task assignment to `(harness, sessionId)`.
@@ -68,7 +68,8 @@ failed launch MUST be reported rather than silently queued to an invented ID.
 
 ```sh
 hp agent discover --project . --module api
-hp task assign --project . --id implement-api --registration-id <id>
+hp coordinator dispatch --project . --task-id implement-api \
+  --harness claude-code --session-id <actual-id> --worktree ./repos/api
 
 # If direct delivery cannot start, in the assigned provider session later:
 hp agent register --project . --harness claude-code --session-id <actual-id>
@@ -86,5 +87,7 @@ machine sees assignments only after project changes are synchronized. Inbox
 lookup proves a matching ID was supplied, not that the caller controls the
 provider session. Concurrent task file edits still require normal Git merge
 handling; this RFC does not define a distributed claim lock or reliable wakeup.
-The reference CLI currently implements assignment and inbox discovery; direct
-provider adapters and the downgrade orchestration remain to be implemented.
+The reference CLI implements assignment, inbox discovery, direct adapters for
+Codex, Claude Code, and Cursor, and preflight downgrade to the inbox. A
+provider process that starts but does not return a clear outcome is recorded
+as uncertain and requires human reconciliation before `--retry`.

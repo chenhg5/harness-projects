@@ -167,6 +167,8 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.stateUpdate(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
+	case "coordinator dispatch":
+		return a.coordinatorDispatch(args[2:])
 	case "schema list":
 		return a.schemaList(args[2:])
 	case "schema get":

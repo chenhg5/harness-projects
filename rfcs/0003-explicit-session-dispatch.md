@@ -14,7 +14,7 @@ the effective session reported by the provider, and the exact worktree used.
 
 ## Motivation
 
-The current `hp run create` records a planned execution but does not launch a
+`hp run create` records a planned execution but does not launch a
 coding agent or bind that run to a provider conversation. Launching a CLI
 without a session choice can silently create a fresh conversation or continue
 the latest conversation in a directory. Either outcome can lose the intended
@@ -42,21 +42,19 @@ handoffs, artifacts, and verification evidence.
 
 ### Explicit selection
 
-`hp dispatch` MUST require `--session`. The value MUST be either `new` or a
-specific provider session ID. A future named binding MAY also be accepted if
+`hp coordinator dispatch` currently requires `--session-id` with a specific
+existing provider session ID. A future `--session new` mode MAY be added. A
+future named binding MAY also be accepted if
 it resolves to exactly one provider, working directory, and session ID before
 launch. Empty values, `latest`, implicit `continue`, and interactive pickers
 MUST NOT be used by unattended dispatch.
 
 ```sh
-hp dispatch --project . --task-id implement-api --harness codex \
-  --worktree ./repos/api/feature-x --session new
-
-hp dispatch --project . --task-id implement-api --harness codex \
-  --worktree ./repos/api/feature-x --session 0192-example-provider-id
+hp coordinator dispatch --project . --task-id implement-api --harness codex \
+  --worktree ./repos/api/feature-x --session-id 0192-example-provider-id
 ```
 
-`--session new` is an explicit request for a fresh conversation. An existing ID
+In a future new-session mode, `--session new` would request a fresh conversation. An existing ID
 is an explicit request to resume that conversation. The CLI MUST NOT change
 one request into the other as an automatic fallback. If an ID cannot be
 validated or resumed, dispatch fails with a recoverable error and leaves the
@@ -100,12 +98,13 @@ session explicitly for CLI dispatch.
 
 ### Execution safety and results
 
-The Coordinator MUST prevent two local dispatches from writing to the same
-provider session concurrently. If it cannot determine whether an external
-process is already using that session, it MUST refuse the CLI resume with a
-clear error unless the provider offers a safe attach mechanism. A session lock
-does not grant tool permissions; adapter execution follows the configured
-harness permission policy.
+The Coordinator MUST prevent two local `hp` dispatches from writing to the
+same provider session concurrently. The local lock cannot detect a provider
+process started outside `hp`. Current preflight checks self-reported presence
+and Claude Code's active-session list; it cannot prove exclusive ownership of
+every Cursor session. Further provider checks are needed to satisfy the stronger
+external-process safety requirement. A session lock does not grant tool
+permissions; adapter execution follows the configured harness permission policy.
 
 The adapter MUST preserve the provider event stream or a diagnostic log,
 process exit status, and final response as run artifacts. A successful process
@@ -120,9 +119,9 @@ without starting a provider process or changing a provider session.
 
 The core Coordinator owns selection, run lifecycle, locking, and persistence.
 Each provider adapter owns argument construction, process lifecycle, JSON event
-parsing, and provider-specific session validation. The first CLI adapters may
-cover Codex and Claude Code; Cursor follows the same contract once its local
-session and output behavior is verified. The core must not depend on provider
+parsing, and provider-specific session validation. The initial adapters cover
+Codex queue delivery and explicit non-interactive resumes through Claude Code
+and Cursor. The core must not depend on provider
 event names such as `thread.started` or `session_id`.
 
 ## Scenarios
@@ -144,7 +143,7 @@ event names such as `thread.started` or `session_id`.
 ### Cross-harness continuation
 
 - **GIVEN** a Codex run ends with a handoff and recorded artifacts
-- **WHEN** a Claude Code run starts with `--session new`
+- **WHEN** a future Claude Code run starts with `--session new`
 - **THEN** the new run receives the project task and handoff context
 - **AND** it gets a distinct Claude Code session ID
 
