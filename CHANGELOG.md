@@ -2,7 +2,26 @@
 
 All notable changes to Harness Projects will be documented here.
 
-## Unreleased
+## v0.0.3 - 2026-10-15
+
+- Added a local project dashboard with section navigation and English and
+  Simplified Chinese language switching. Fixed status badge sizing.
+- Added local agent session registration, discovery, lease renewal, capability
+  filters, and stale pruning.
+- Added durable task assignment to an explicit provider session, a session
+  inbox with dependency readiness, and reassignment history.
+- Specified direct CLI delivery with an inbox fallback when delivery cannot
+  begin safely. Provider CLI delivery remains planned; this release does not
+  invoke another coding agent.
+
+## v0.0.2 - 2026-10-14
+
+- Added evidence-backed completion rules for goals, tasks, and runs.
+- Made goal management method-neutral while retaining optional OKR data.
+- Clarified the v1 boundary between explanatory documents and structured
+  indexes.
+
+## v0.0.1 - 2026-10-14
 
 - Created the repository and initial project structure.
 - Added the Go `hp` CLI with project initialization, validation, file read/write,
@@ -21,7 +40,3 @@ All notable changes to Harness Projects will be documented here.
 - Added bounded project cleanup with safe archival and explicit forced deletion.
 - Added the cross-harness `harness-projects` skill plus release installation,
   multi-platform Makefile archives, checksum generation, and `INSTALL.md`.
-- Added local agent session registration and discovery with capability filters,
-  expiring leases, stale pruning, and project entry-point instructions.
-- Added durable task assignment to provider sessions, self-service task inboxes
-  with dependency readiness, and preserved reassignment history.
