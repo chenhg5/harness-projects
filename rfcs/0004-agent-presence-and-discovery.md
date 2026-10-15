@@ -1,4 +1,4 @@
-# RFC 0004: Agent Session Presence and Discovery
+# RFC 0004: Agent Participation and Session Discovery
 
 - **Status:** Draft
 - **Authors:** Harness Projects contributors
@@ -9,23 +9,22 @@
 An agent that begins work in a Harness Project registers its current provider
 session so other agents and the Coordinator can discover who is working, where,
 and on what. Registration includes the harness type, the actual provider
-session ID, responsibility, modules, capabilities, and a bounded presence
-lease. The reference CLI provides registration, discovery, renewal, and exit
-commands.
+session ID, responsibility, modules, and capabilities. Participation is a
+durable project fact. A separate local delivery lease helps the Coordinator
+decide whether a CLI resume is safe to attempt.
 
 ## Motivation
 
 The `agents/` directory describes durable roles, while `runs/` records
 execution attempts. Neither answers whether a Codex, Claude Code, Cursor, or
-other agent session is currently participating in the project. Discovery is a
+other agent session has participated in the project. Discovery is a
 prerequisite for choosing a recipient for a handoff or future dispatch.
 
 ## Scope and non-goals
 
-This RFC defines local project presence. It does not define agent-to-agent
-messaging, prove that a provider process is still running, or grant permission
-to resume a session. Dispatch still follows RFC 0003 and must select a session
-explicitly. A future remote registry may synchronize presence across machines.
+This RFC defines project participation and a local delivery hint. It does not
+define agent-to-agent messaging or claim a provider process is running.
+Dispatch still follows RFC 0003 and must select a session explicitly.
 
 ## Proposed contract
 
@@ -45,49 +44,45 @@ It should report that limitation and continue to use the project files for
 handoffs. `cc` is a CLI alias for `claude-code`; the stored harness name is
 `claude-code`. Other harness names remain extensible.
 
-Each registration has a stable local ID derived from the canonical harness
+Each registration has a stable ID derived from the canonical harness
 name and provider session ID. Its record includes:
 
 - `harness` and `sessionId` for provider identity;
 - `worktree` and optional `taskId` for project placement;
 - `focus`, `modules`, and `capabilities` for self-described responsibility;
-- `availability` (`available`, `busy`, or `paused`);
-- `registeredAt`, `lastSeenAt`, and `expiresAt` for a bounded lease.
+- `registeredAt` and `updatedAt` for participation history.
 
 Registration is idempotent for the same harness and session ID: a later call
-updates the description and lease while preserving the original registration
+updates the description while preserving the original registration
 time. A session used in two projects has a separate registration in each
 project. A run ID is not a registration ID or a provider session ID.
 
 ### Discovery and lifecycle
 
-`hp agent discover --project .` returns unexpired registrations. It MAY filter
-by harness, module, or capability. `--include-stale` exposes expired records
-for inspection. Discovery MUST report the declared availability and whether
-the lease is live; it MUST NOT claim that a live lease proves a reachable
-process.
+`hp agent discover --project .` returns all registered participants. It MAY
+filter by harness, module, or capability. There is no project-level online,
+offline, or expiration state. `--include-stale` is accepted for compatibility
+but has no effect on durable discovery.
 
-Agents SHOULD renew their lease after meaningful work and when waiting for
-further tasks:
+Agents MAY refresh a machine-local delivery hint when they want the Coordinator
+to attempt direct CLI delivery:
 
 ```sh
 hp agent heartbeat --project . --id <registration-id> --availability available
 ```
 
-On leaving a project, an agent SHOULD unregister. Expired registrations are
-hidden from default discovery even if an agent fails to unregister. The
-reference CLI uses a two-hour default lease and permits one minute to seven
-days. An interrupted agent can renew an expired record using its ID. The CLI
-also provides `hp agent prune` to remove records that have stayed expired for
-seven days by default; a dry run previews the removals.
+`hp agent unregister` ends that local delivery hint and retains the durable
+participation record. The reference CLI uses a two-hour default hint and
+permits one minute to seven days. `hp agent prune` removes old local hints
+only. Neither command deletes participant history.
 
 ### Storage and routing boundary
 
-Local presence records live under `.harness-project/agent-sessions/` and are
-machine-local transient state. They are ignored by Git; durable roles remain
-in `agents/`, and durable work outcomes remain in `worklogs/`, `handoffs/`,
-tasks, and runs. The registry records are JSON so agents can inspect them, but
-the CLI is the write interface.
+Durable participant records live under `agents/sessions/` and are tracked by
+project Git. Machine-local delivery hints live under
+`.harness-project/agent-sessions/` and are ignored by Git. Roles, worklogs,
+handoffs, tasks, and runs keep their existing meanings. The CLI is the write
+interface for both records.
 
 Registration makes an agent discoverable, not automatically reachable. A task
 may be durably assigned to its session without sending a message, as defined
@@ -102,14 +97,14 @@ CLI adapter must not resume a session that may already be active elsewhere.
 - **GIVEN** a Claude Code agent registers with module `canvas` and capability
   `typescript`
 - **WHEN** another agent discovers sessions filtered by `canvas`
-- **THEN** the registration shows its session ID, focus, and availability
+- **THEN** the registration shows its session ID and focus
 
-### Stale registration
+### Expired local delivery hint
 
-- **GIVEN** a Codex agent stops without unregistering
-- **WHEN** its lease expires
-- **THEN** default discovery omits it
-- **AND** `--include-stale` still allows diagnosis
+- **GIVEN** a Codex agent registered and its local delivery hint expires
+- **WHEN** another agent discovers project participants
+- **THEN** the Codex session still appears
+- **AND** direct CLI delivery requires a refreshed local hint or falls back to inbox
 
 ### Harness does not expose an ID
 
@@ -120,13 +115,15 @@ CLI adapter must not resume a session that may already be active elsewhere.
 
 ## Compatibility and migration
 
-Existing Harness Projects remain valid without a presence directory.
-Registering the first session creates the local directory on demand. Existing
-`agents/` role documents and run records remain unchanged.
+Existing Harness Projects remain valid without a participant directory.
+Registering the first session creates `agents/sessions/` on demand. Old local
+delivery hints do not automatically become durable participation records;
+the actual session must register again. Existing role documents and run records
+remain unchanged.
 
 ## Open questions
 
-- How should a remote registry reconcile leases from multiple machines?
+- How should a remote Coordinator verify direct delivery across machines?
 - Which harnesses can expose their current session ID to an in-session agent?
 - Should provider transports advertise verified routing capabilities in a
   separate registry instead of on the presence record?

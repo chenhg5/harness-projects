@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/chenhg5/harness-projects/internal/model"
+	"github.com/chenhg5/harness-projects/internal/participants"
 	"github.com/chenhg5/harness-projects/internal/presence"
 	"github.com/chenhg5/harness-projects/internal/runtime"
 	"github.com/chenhg5/harness-projects/internal/store"
@@ -44,12 +44,9 @@ func (a app) taskAssign(args []string) int {
 	}
 	assignment := model.TaskAssignment{AssignedAt: timestamp()}
 	if *registrationID != "" {
-		view, err := (presence.Registry{Root: s.Root}).Get(*registrationID, time.Now())
+		view, err := (participants.Registry{Root: s.Root}).Get(*registrationID)
 		if err != nil {
 			return a.operationError(err, *registrationID)
-		}
-		if !view.Live {
-			return a.fail(failure{5, "conflict", "agent registration has expired", "Ask the agent to register again or specify its known session explicitly", *registrationID})
 		}
 		assignment.Harness, assignment.SessionID, assignment.RegistrationID = view.Harness, view.SessionID, view.ID
 	} else {

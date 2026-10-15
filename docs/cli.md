@@ -91,14 +91,18 @@ task. The registration command returns a registration ID for `heartbeat`,
 `get`, and `unregister`. `hp agent discover` returns JSON by default for other
 agents to filter by harness, module, or capability.
 
-Registrations are machine-local leases under `.harness-project/agent-sessions/`
-and are ignored by Git. The default lease lasts two hours. An agent should
-renew it after meaningful work, and unregister when it leaves the project.
-Expired entries are hidden by default; use `--include-stale` to inspect them.
-Use `hp agent prune` to remove records that have stayed expired for a chosen
-period; the default is seven days.
-Presence is self-reported and does not guarantee that a session is running or
-can receive a message. `hp task assign` can use a live registration or an
+Participation records are stored under `agents/sessions/` and tracked by project
+Git. They do not expire or carry an online/offline state. `hp agent discover`
+returns all registered participants; `--include-stale` is accepted for
+compatibility but is now a no-op. The actual session must register; old local
+leases cannot establish historical participation by themselves.
+
+Machine-local direct-delivery hints live under `.harness-project/agent-sessions/`
+and are ignored by Git. They expire after two hours by default. `hp agent
+heartbeat` renews a hint, `hp agent unregister` ends it, and `hp agent prune`
+removes old hints. None of those commands removes a participant. A delivery
+hint is self-reported and does not prove a session is running or reachable.
+`hp task assign` can use a durable registration or an
 explicit `--harness` and `--session-id` pair to write a durable assignment
 into the task. `hp task inbox` lets the assigned session find active work and
 dependency readiness on its next visit. It does not require a live lease or
@@ -113,8 +117,8 @@ their structured result streams. The task is never marked complete solely
 because the provider command exited successfully.
 
 The default `--delivery auto` keeps the task in the target session inbox when
-preflight cannot safely begin delivery, for example when its registration is
-missing, expired, busy for a separate resume, registered to another worktree,
+preflight cannot safely begin delivery, for example when its local delivery
+hint is missing, expired, busy for a separate resume, tied to another worktree,
 or its CLI is unavailable. `--delivery direct` reports that case as an error
 while preserving the assignment; `--delivery inbox` deliberately skips the
 provider call. `--dry-run` previews local checks without writing or invoking

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/chenhg5/harness-projects/internal/cleanup"
+	"github.com/chenhg5/harness-projects/internal/participants"
 	"github.com/chenhg5/harness-projects/internal/presence"
 	"github.com/chenhg5/harness-projects/internal/store"
 )
@@ -18,11 +19,11 @@ func (a app) agentRegister(args []string) int {
 	sessionID := fs.String("session-id", "", "current provider session ID (required)")
 	worktree := fs.String("worktree", "", "working directory, relative to project root if not absolute")
 	taskID := fs.String("task-id", "", "current project task ID")
-	availability := fs.String("availability", "", "available|busy|paused (defaults to busy for a new registration)")
+	availability := fs.String("availability", "", "local delivery hint: available|busy|paused (defaults to busy)")
 	focus := fs.String("focus", "", "current responsibility")
 	modules := fs.String("modules", "", "comma-separated modules or repository areas")
 	capabilities := fs.String("capabilities", "", "comma-separated skills or capabilities")
-	ttlText := fs.String("ttl", presence.DefaultTTL.String(), "registration lease, 1m..168h")
+	ttlText := fs.String("ttl", presence.DefaultTTL.String(), "local delivery hint lease, 1m..168h")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview registration without writing")
 	if err := parse(fs, args); err != nil {
@@ -66,21 +67,35 @@ func (a app) agentRegister(args []string) int {
 		Modules: moduleList, Capabilities: capabilityList,
 	}
 	now := time.Now()
-	var item presence.View
+	lease, err := registry.PrepareRegister(requested, ttl, now)
+	if err != nil {
+		return a.operationError(err, *sessionID)
+	}
+	participantRegistry := participants.Registry{Root: s.Root}
+	requestedParticipant := participants.Session{Harness: lease.Harness, SessionID: lease.SessionID,
+		Focus: lease.Focus, Modules: lease.Modules, Capabilities: lease.Capabilities,
+		Worktree: participants.ProjectRelativeWorktree(s.Root, lease.Worktree), TaskID: lease.TaskID}
+	var item participants.Session
 	if *dryRun {
-		item, err = registry.PrepareRegister(requested, ttl, now)
+		item, err = participantRegistry.PrepareRegister(requestedParticipant, now)
 	} else {
-		item, err = registry.Register(requested, ttl, now)
+		item, err = participantRegistry.Register(requestedParticipant, now)
 	}
 	if err != nil {
 		return a.operationError(err, *sessionID)
 	}
 	result := map[string]any{"action": "agent.register", "agent": item}
 	if *dryRun {
-		a.emit(result, "Would register agent "+item.ID, "json")
+		result["deliveryLease"] = lease
+		a.emit(result, "Would record participant "+item.ID, "json")
 		return 10
 	}
-	a.emit(result, "Registered agent "+item.ID+" ("+item.Harness+" / "+item.SessionID+")", selectedFormat(*format, *jsonFlag, a.out))
+	if localLease, leaseErr := registry.Register(requested, ttl, now); leaseErr == nil {
+		result["deliveryLease"] = localLease
+	} else {
+		result["deliveryLeaseError"] = leaseErr.Error()
+	}
+	a.emit(result, "Recorded participant "+item.ID+" ("+item.Harness+" / "+item.SessionID+")", selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
 
@@ -90,7 +105,7 @@ func (a app) agentDiscover(args []string) int {
 	harness := fs.String("harness", "", "filter by harness")
 	module := fs.String("module", "", "filter by module")
 	capability := fs.String("capability", "", "filter by capability")
-	includeStale := fs.Bool("include-stale", false, "include expired registrations")
+	_ = fs.Bool("include-stale", false, "deprecated; durable discovery always includes participants")
 	format, jsonFlag := outputFlags(fs)
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
@@ -110,20 +125,15 @@ func (a app) agentDiscover(args []string) int {
 	if err != nil {
 		return a.operationError(err, *projectPath)
 	}
-	items, err := (presence.Registry{Root: s.Root}).Discover(presence.Filter{
+	items, err := (participants.Registry{Root: s.Root}).Discover(participants.Filter{
 		Harness: selectedHarness, Module: *module, Capability: *capability,
-		IncludeStale: *includeStale,
-	}, time.Now())
+	})
 	if err != nil {
 		return a.operationError(err, *projectPath)
 	}
 	lines := make([]string, 0, len(items))
 	for _, item := range items {
-		state := item.Availability
-		if !item.Live {
-			state = "stale"
-		}
-		lines = append(lines, fmt.Sprintf("%s %s %s %s — %s", item.ID, item.Harness, item.SessionID, state, item.Focus))
+		lines = append(lines, fmt.Sprintf("%s %s %s — %s", item.ID, item.Harness, item.SessionID, item.Focus))
 	}
 	human := fmt.Sprintf("%d agent session(s)", len(items))
 	if len(lines) > 0 {
@@ -136,7 +146,7 @@ func (a app) agentDiscover(args []string) int {
 func (a app) agentGet(args []string) int {
 	fs := newFlags("agent get")
 	projectPath := fs.String("project", "", "project directory (required)")
-	id := fs.String("id", "", "registration ID (required)")
+	id := fs.String("id", "", "participant registration ID (required)")
 	format, jsonFlag := outputFlags(fs)
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
@@ -148,11 +158,11 @@ func (a app) agentGet(args []string) int {
 	if err != nil {
 		return a.operationError(err, *projectPath)
 	}
-	item, err := (presence.Registry{Root: s.Root}).Get(*id, time.Now())
+	item, err := (participants.Registry{Root: s.Root}).Get(*id)
 	if err != nil {
 		return a.operationError(err, *id)
 	}
-	a.emit(item, item.Harness+" / "+item.SessionID+" / "+item.Availability, selectedFormat(*format, *jsonFlag, a.out))
+	a.emit(item, item.Harness+" / "+item.SessionID, selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
 
@@ -162,7 +172,7 @@ func (a app) agentHeartbeat(args []string) int {
 	id := fs.String("id", "", "registration ID (required)")
 	availability := fs.String("availability", "", "available|busy|paused")
 	focus := fs.String("focus", "", "updated responsibility")
-	ttlText := fs.String("ttl", presence.DefaultTTL.String(), "registration lease, 1m..168h")
+	ttlText := fs.String("ttl", presence.DefaultTTL.String(), "local delivery hint lease, 1m..168h")
 	format, jsonFlag := outputFlags(fs)
 	dryRun := fs.Bool("dry-run", false, "preview heartbeat without writing")
 	if err := parse(fs, args); err != nil {
@@ -203,7 +213,7 @@ func (a app) agentUnregister(args []string) int {
 	projectPath := fs.String("project", "", "project directory (required)")
 	id := fs.String("id", "", "registration ID (required)")
 	format, jsonFlag := outputFlags(fs)
-	dryRun := fs.Bool("dry-run", false, "preview removal without writing")
+	dryRun := fs.Bool("dry-run", false, "preview ending the local delivery hint")
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
 	}
@@ -215,30 +225,36 @@ func (a app) agentUnregister(args []string) int {
 		return a.operationError(err, *projectPath)
 	}
 	registry := presence.Registry{Root: s.Root}
-	item, err := registry.Get(*id, time.Now())
+	item, err := (participants.Registry{Root: s.Root}).Get(*id)
 	if err != nil {
 		return a.operationError(err, *id)
 	}
+	_, leaseErr := registry.Get(*id, time.Now())
+	if leaseErr != nil && !store.IsNotFound(leaseErr) {
+		return a.operationError(leaseErr, *id)
+	}
 	if !*dryRun {
-		if err := registry.Unregister(*id); err != nil {
-			return a.operationError(err, *id)
+		if leaseErr == nil {
+			if err := registry.Unregister(*id); err != nil {
+				return a.operationError(err, *id)
+			}
 		}
 	}
-	result := map[string]any{"action": "agent.unregister", "agent": item, "removed": !*dryRun}
+	result := map[string]any{"action": "agent.unregister", "agent": item, "deliveryLeaseRemoved": !*dryRun && leaseErr == nil, "participantRetained": true}
 	if *dryRun {
-		a.emit(result, "Would unregister agent "+item.ID, "json")
+		a.emit(result, "Would end local delivery lease for "+item.ID, "json")
 		return 10
 	}
-	a.emit(result, "Unregistered agent "+item.ID, selectedFormat(*format, *jsonFlag, a.out))
+	a.emit(result, "Ended local delivery lease for "+item.ID+"; participant retained", selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
 
 func (a app) agentPrune(args []string) int {
 	fs := newFlags("agent prune")
 	projectPath := fs.String("project", "", "project directory (required)")
-	olderThan := fs.String("older-than", "7d", "remove registrations expired this long ago")
+	olderThan := fs.String("older-than", "7d", "remove local delivery hints expired this long ago")
 	format, jsonFlag := outputFlags(fs)
-	dryRun := fs.Bool("dry-run", false, "preview stale registrations without removing them")
+	dryRun := fs.Bool("dry-run", false, "preview stale local delivery hints without removing them")
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
 	}

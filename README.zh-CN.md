@@ -76,7 +76,7 @@ cd my-project
 hp task create --project . --id improve-api --title "Improve the API" \
   --description "Reduce request latency" --acceptance "Benchmark and tests pass"
 
-# 目标 Agent 注册自己真实且空闲的 Provider 会话。
+# 目标 Agent 登记真实的 Provider 会话；直接投递另有安全检查。
 SESSION_ID="paste-real-provider-session-id"
 hp agent register --project . --harness claude-code \
   --session-id "$SESSION_ID" --worktree . --focus "API latency"
@@ -99,7 +99,7 @@ hp coordinator dispatch --project . --task-id improve-api \
 | 项目工作空间 | 独立 Git 项目的创建与校验、文件操作、跨 Harness 入口 |
 | 目标与执行 | 有完成条件的目标、任务依赖、Run、状态快照和验证引用 |
 | 共享上下文 | 可搜索的记忆、工作日志、handoff 和项目上下文 Skill |
-| Agent 协作 | 本地会话注册和发现、准确会话的任务 inbox，以及面向 Codex、Claude Code、Cursor 的 CLI 投递 |
+| Agent 协作 | 持久会话参与记录和发现、准确会话的任务 inbox，以及面向 Codex、Claude Code、Cursor 的 CLI 投递 |
 | 源码仓库 | 仓库登记和 `repos/` 下的本地 Git worktree 生命周期 |
 | 可视化 | 只读本地看板，支持英语和简体中文 |
 | 日常维护 | dry-run、结构化 JSON 输出、临时文件清理 |
@@ -118,6 +118,7 @@ my-project/              # 独立的 Git 仓库
 ├── state/               # 当前计划与状态快照
 ├── tasks/               # 任务依赖和分配
 ├── runs/                # 执行尝试与证据
+├── agents/sessions/     # 持久会话参与记录
 ├── context/             # 可搜索的项目记忆
 ├── worklogs/            # 每次会话的工作记录
 ├── handoffs/            # 继续工作的说明
@@ -131,7 +132,7 @@ my-project/              # 独立的 Git 仓库
 └── .harness-project/    # 项目元数据
 ```
 
-项目 Git 仓库追踪协作文件。`repos/` 中的源码仓库保留各自的分支和提交历史；临时产物及本地会话在线信息不会提交到项目 Git。
+项目 Git 仓库追踪协作文件，包括 `agents/sessions/` 中的参与记录。`repos/` 中的源码仓库保留各自的分支和提交历史；临时产物及本机直接投递线索不会提交到项目 Git。
 
 ## 继续了解
 

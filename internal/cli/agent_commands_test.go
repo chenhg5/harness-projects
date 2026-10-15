@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,7 +48,7 @@ func TestAgentRegistrationDiscoveryLifecycle(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &found); err != nil {
 		t.Fatal(err)
 	}
-	if len(found) != 1 || found[0]["id"] != created.Agent.ID || found[0]["live"] != true {
+	if len(found) != 1 || found[0]["id"] != created.Agent.ID || found[0]["live"] != nil {
 		t.Fatalf("unexpected discovery: %s", stdout)
 	}
 	if code, _, stderr := run(t, "agent", "heartbeat", "--project", root, "--id", created.Agent.ID, "--availability", "available"); code != 0 {
@@ -59,7 +60,7 @@ func TestAgentRegistrationDiscoveryLifecycle(t *testing.T) {
 	if code, _, stderr := run(t, "agent", "unregister", "--project", root, "--id", created.Agent.ID); code != 0 {
 		t.Fatalf("unregister: code=%d stderr=%s", code, stderr)
 	}
-	if code, stdout, stderr := run(t, "agent", "discover", "--project", root); code != 0 || stdout != "[]\n" || stderr != "" {
-		t.Fatalf("unregister left registration: code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	if code, stdout, stderr := run(t, "agent", "discover", "--project", root); code != 0 || stderr != "" || !strings.Contains(stdout, created.Agent.ID) {
+		t.Fatalf("unregister erased participant: code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 }

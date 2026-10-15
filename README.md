@@ -76,7 +76,7 @@ cd my-project
 hp task create --project . --id improve-api --title "Improve the API" \
   --description "Reduce request latency" --acceptance "Benchmark and tests pass"
 
-# The target agent registers its real, idle provider session.
+# The target agent records its real provider session; direct delivery has a separate safety check.
 SESSION_ID="paste-real-provider-session-id"
 hp agent register --project . --harness claude-code \
   --session-id "$SESSION_ID" --worktree . --focus "API latency"
@@ -99,7 +99,7 @@ The target session can inspect its assigned work with `hp task inbox --project .
 | Project workspace | Git-backed project initialization, validation, file access, and shared harness entry points |
 | Goals and work | Outcome-oriented goals, task dependencies, run records, state snapshots, and verification references |
 | Shared context | Searchable memory records, work logs, handoffs, and project-context skills |
-| Agent coordination | Local session registration and discovery, exact-session task inbox, CLI dispatch to Codex, Claude Code, and Cursor |
+| Agent coordination | Durable session participation and discovery, exact-session task inbox, CLI dispatch to Codex, Claude Code, and Cursor |
 | Source repositories | Repository registration and local Git worktree lifecycle under `repos/` |
 | Visibility | Read-only local dashboard with English and Simplified Chinese UI |
 | Maintenance | Dry-run support, structured JSON output, and bounded cleanup of transient material |
@@ -118,6 +118,7 @@ my-project/              # Its own Git repository
 ├── state/               # Current plan and snapshot
 ├── tasks/               # Dependencies and assignments
 ├── runs/                # Attempts and evidence
+├── agents/sessions/     # Durable session participation
 ├── context/             # Searchable project memory
 ├── worklogs/            # What each session did
 ├── handoffs/            # Continuation instructions
@@ -131,7 +132,7 @@ my-project/              # Its own Git repository
 └── .harness-project/    # Project metadata
 ```
 
-The coordination repository tracks the project files. Nested source repositories keep their own branches and commit histories; transient artifacts and local presence leases are ignored by project Git.
+The coordination repository tracks the project files. Nested source repositories keep their own branches and commit histories; transient artifacts and local delivery hints are ignored by project Git; participant records are tracked.
 
 ## Explore the project
 

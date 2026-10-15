@@ -126,6 +126,29 @@ func TestCoordinatorDispatchPreflightDowngradesWithoutProviderCall(t *testing.T)
 	}
 }
 
+func TestCoordinatorDispatchKeepsParticipantAssignmentWithoutLocalLease(t *testing.T) {
+	root := dispatchTestProject(t, "codex", "codex-session", "available")
+	code, discovered, stderr := run(t, "agent", "discover", "--project", root)
+	var sessions []struct {
+		ID string `json:"id"`
+	}
+	if code != 0 || stderr != "" || json.Unmarshal([]byte(discovered), &sessions) != nil || len(sessions) != 1 {
+		t.Fatalf("discover: code=%d stdout=%s stderr=%s", code, discovered, stderr)
+	}
+	if code, _, stderr := run(t, "agent", "unregister", "--project", root, "--id", sessions[0].ID); code != 0 {
+		t.Fatalf("end delivery hint: code=%d stderr=%s", code, stderr)
+	}
+	code, result, stderr := dispatchCall(t, root, "codex", "codex-session", "--run-id", "queued-after-lease")
+	if code != 0 || stderr != "" || result.DeliveryStatus != "queued" || !strings.Contains(result.DeliveryReason, "local delivery lease") {
+		t.Fatalf("expected inbox fallback: code=%d run=%+v stderr=%s", code, result, stderr)
+	}
+	code, taskJSON, stderr := run(t, "task", "get", "--project", root, "--id", "sample")
+	var task model.Task
+	if code != 0 || stderr != "" || json.Unmarshal([]byte(taskJSON), &task) != nil || task.Assignment == nil || task.Assignment.RegistrationID != sessions[0].ID {
+		t.Fatalf("durable participant reference lost: code=%d task=%s stderr=%s", code, taskJSON, stderr)
+	}
+}
+
 func TestCoordinatorDispatchClaudeTerminalAndUncertain(t *testing.T) {
 	root := dispatchTestProject(t, "claude-code", "claude-session", "available")
 	argsPath := filepath.Join(t.TempDir(), "args.txt")

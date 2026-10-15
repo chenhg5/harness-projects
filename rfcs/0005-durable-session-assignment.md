@@ -20,12 +20,12 @@ in the inbox for voluntary discovery. RFC 0003 defines the direct path.
 canonical `harness`, actual `sessionId`, `assignedAt`, and an optional
 `registrationId` for provenance. The pair `(harness, sessionId)` is the
 routing key. It is distinct from a provider-neutral `agentId`, task ID, run ID,
-and transient registration ID. A live registration can supply the routing key;
-the caller can also provide the pair explicitly for an offline session.
+and participant registration ID. A durable registration can supply the routing
+key; the caller can also provide the pair explicitly.
 
 The task's assignment is stored with the project and can be synchronized with
-its Git history. Local presence leases are ignored by Git. Expiration or
-removal of a presence record MUST NOT remove an assignment. A new assignment
+its Git history. Local delivery hints are ignored by Git. Expiration or
+removal of a delivery hint MUST NOT remove an assignment. A new assignment
 to the same routing key is idempotent; changing it requires `--replace` and
 moves the previous assignment into `assignmentHistory`. `hp task unassign`
 also preserves the old assignment in history with `endedAt`.

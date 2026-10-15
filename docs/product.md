@@ -34,10 +34,11 @@ tests, or produce research. An Agent is an abstract role; a provider adapter
 maps it to a Claude Code session, Cursor Agent, Codex session, local process, or
 another runner.
 
-Durable Agent roles live in `agents/`. A working Agent may also publish a
-machine-local presence lease with its actual provider session ID, current
-responsibility, modules, and capabilities. Other Agents can discover that
-session without treating its self-reported presence as proof of reachability.
+Durable Agent roles live in `agents/`. A participating session records its
+actual provider session ID, responsibility, modules, and capabilities in
+`agents/sessions/`. Other Agents can discover that participation later.
+Direct CLI delivery uses a separate machine-local hint for safety; neither
+record proves that a provider process is currently running.
 
 ### Thread
 

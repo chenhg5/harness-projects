@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/chenhg5/harness-projects/internal/model"
@@ -61,6 +62,9 @@ func TestTaskAssignmentAndSessionInbox(t *testing.T) {
 		t.Fatalf("expected ready task: %s", ready)
 	}
 	mustRun("agent", "unregister", "--project", root, "--id", registration.Agent.ID)
+	if got := mustRun("agent", "discover", "--project", root); !strings.Contains(got, registration.Agent.ID) {
+		t.Fatalf("participant disappeared after local lease ended: %s", got)
+	}
 	if got := mustRun("task", "inbox", "--project", root, "--harness", "cc", "--session-id", "session-a", "--ready-only"); got == "[]\n" {
 		t.Fatal("assignment disappeared when local presence was removed")
 	}
@@ -85,5 +89,12 @@ func TestTaskAssignmentAndSessionInbox(t *testing.T) {
 	}
 	if task.Assignment != nil || len(task.AssignmentHistory) != 2 {
 		t.Fatalf("unassign history missing: %+v", task)
+	}
+	mustRun("task", "assign", "--project", root, "--id", "dependent", "--registration-id", registration.Agent.ID)
+	if err := json.Unmarshal([]byte(mustRun("task", "get", "--project", root, "--id", "dependent")), &task); err != nil {
+		t.Fatal(err)
+	}
+	if task.Assignment == nil || task.Assignment.RegistrationID != registration.Agent.ID {
+		t.Fatalf("durable participant could not be used for assignment: %+v", task.Assignment)
 	}
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/chenhg5/harness-projects/internal/dispatch"
 	"github.com/chenhg5/harness-projects/internal/model"
+	"github.com/chenhg5/harness-projects/internal/participants"
 	"github.com/chenhg5/harness-projects/internal/presence"
 	"github.com/chenhg5/harness-projects/internal/runtime"
 	"github.com/chenhg5/harness-projects/internal/store"
@@ -123,7 +124,12 @@ func (a app) coordinatorDispatch(args []string) int {
 		}
 	}
 	now := time.Now()
-	registration, registrationErr := (presence.Registry{Root: s.Root}).Get(presence.RegistrationID(harness, *sessionID), now)
+	registrationID := presence.RegistrationID(harness, *sessionID)
+	participant, participantErr := (participants.Registry{Root: s.Root}).Get(registrationID)
+	if participantErr != nil && !errors.Is(participantErr, os.ErrNotExist) {
+		return a.operationError(participantErr, registrationID)
+	}
+	registration, registrationErr := (presence.Registry{Root: s.Root}).Get(registrationID, now)
 	if registrationErr != nil && !errors.Is(registrationErr, os.ErrNotExist) {
 		return a.operationError(registrationErr, *sessionID)
 	}
@@ -135,8 +141,8 @@ func (a app) coordinatorDispatch(args []string) int {
 		}
 		task.Assignment = &model.TaskAssignment{Harness: harness, SessionID: *sessionID, AssignedAt: timestamp()}
 	}
-	if registrationErr == nil {
-		task.Assignment.RegistrationID = registration.ID
+	if participantErr == nil {
+		task.Assignment.RegistrationID = participant.ID
 	}
 	task.UpdatedAt = timestamp()
 	if !*dryRun {
@@ -246,10 +252,10 @@ func dispatchPreflight(delivery, harness, sessionID, worktree, prompt string, re
 		return dispatch.Prepared{}, "inbox delivery selected"
 	}
 	if registrationErr != nil {
-		return dispatch.Prepared{}, "target session has no local registration; cannot verify its worktree or availability"
+		return dispatch.Prepared{}, "target session has no local delivery lease; cannot verify its worktree or availability"
 	}
 	if !registration.Live {
-		return dispatch.Prepared{}, "target session registration expired; renew it before direct CLI delivery"
+		return dispatch.Prepared{}, "target session delivery lease expired; renew it before direct CLI delivery"
 	}
 	registeredWorktree, err := filepath.EvalSymlinks(registration.Worktree)
 	if err != nil || registeredWorktree != worktree {
