@@ -95,6 +95,12 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.taskUpdate(args[2:])
 	case "task ready":
 		return a.taskReady(args[2:])
+	case "task assign":
+		return a.taskAssign(args[2:])
+	case "task unassign":
+		return a.taskUnassign(args[2:])
+	case "task inbox":
+		return a.taskInbox(args[2:])
 	case "run create":
 		return a.runCreate(args[2:])
 	case "run list":

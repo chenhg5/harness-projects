@@ -34,6 +34,10 @@ hp task create --project ./my-project --id inventory-api \
   --title "Inventory API" --goal-id modernize-api \
   --deliverables "API endpoints" --acceptance "integration tests" --priority high
 hp task ready --project ./my-project --format json
+hp task assign --project ./my-project --id inventory-api \
+  --registration-id <registration-id>
+hp task inbox --project ./my-project --harness codex \
+  --session-id <actual-provider-session-id>
 hp run create --project ./my-project --id run-001 --task-id inventory-api
 hp run update --project ./my-project --id run-001 --status running
 hp agent register --project ./my-project --harness codex \
@@ -91,8 +95,14 @@ Expired entries are hidden by default; use `--include-stale` to inspect them.
 Use `hp agent prune` to remove records that have stayed expired for a chosen
 period; the default is seven days.
 Presence is self-reported and does not guarantee that a session is running or
-can receive a message. Cross-harness handoffs still use project files, while
-CLI dispatch requires an explicitly selected provider session.
+can receive a message. `hp task assign` can use a live registration or an
+explicit `--harness` and `--session-id` pair to write a durable assignment
+into the task. `hp task inbox` lets the assigned session find active work and
+dependency readiness on its next visit. It does not require a live lease or
+start a provider process. Reassignment requires `--replace`; `hp task
+unassign` clears the current address while retaining assignment history.
+Cross-harness handoffs still use project files, while future CLI dispatch
+requires an explicitly selected provider session.
 
 ## Local dashboard
 

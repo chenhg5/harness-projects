@@ -24,10 +24,15 @@ value, and evidence; that extension is not required by the core protocol.
 ## Tasks
 
 A task is a bounded execution unit. It MUST describe its deliverables and
-acceptance criteria before it is dispatched in a production project.
+acceptance criteria before execution in a production project.
 `dependsOn` contains task IDs that MUST be complete before the task is
-dispatchable. A blocked task MUST state why it is blocked. A completed task
-MUST include a result or evidence reference. Task statuses are `pending`,
+ready to start. An optional `assignment` names a canonical harness and actual
+provider `sessionId`; this pair identifies the session that can discover the
+task through its inbox. Assigning a task MUST NOT imply that the session was
+woken or that work started. Replaced and removed assignments SHOULD remain in
+`assignmentHistory` with their end times. Local presence lease expiry MUST NOT
+erase a durable task assignment. A blocked task MUST state why it is blocked.
+A completed task MUST include a result or evidence reference. Task statuses are `pending`,
 `ready`, `in_progress`, `blocked`, `completed`, `failed`, and `cancelled`.
 
 ## Runs

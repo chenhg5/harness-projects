@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
+	"unicode"
 )
 
 const ResourceSchemaVersion = "1"
@@ -45,26 +47,37 @@ type KeyResult struct {
 }
 
 type Task struct {
-	SchemaVersion string   `json:"schemaVersion"`
-	ID            string   `json:"id"`
-	GoalID        string   `json:"goalId,omitempty"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description,omitempty"`
-	Deliverables  []string `json:"deliverables,omitempty"`
-	Acceptance    []string `json:"acceptance,omitempty"`
-	Priority      string   `json:"priority,omitempty"`
-	Owner         string   `json:"owner,omitempty"`
-	DueDate       string   `json:"dueDate,omitempty"`
-	EstimateHours *float64 `json:"estimateHours,omitempty"`
-	Status        string   `json:"status"`
-	DependsOn     []string `json:"dependsOn,omitempty"`
-	AgentID       string   `json:"agentId,omitempty"`
-	BlockedReason string   `json:"blockedReason,omitempty"`
-	Result        string   `json:"result,omitempty"`
-	Evidence      []string `json:"evidence,omitempty"`
-	Verification  []string `json:"verification,omitempty"`
-	CreatedAt     string   `json:"createdAt"`
-	UpdatedAt     string   `json:"updatedAt"`
+	SchemaVersion     string           `json:"schemaVersion"`
+	ID                string           `json:"id"`
+	GoalID            string           `json:"goalId,omitempty"`
+	Title             string           `json:"title"`
+	Description       string           `json:"description,omitempty"`
+	Deliverables      []string         `json:"deliverables,omitempty"`
+	Acceptance        []string         `json:"acceptance,omitempty"`
+	Priority          string           `json:"priority,omitempty"`
+	Owner             string           `json:"owner,omitempty"`
+	DueDate           string           `json:"dueDate,omitempty"`
+	EstimateHours     *float64         `json:"estimateHours,omitempty"`
+	Status            string           `json:"status"`
+	DependsOn         []string         `json:"dependsOn,omitempty"`
+	AgentID           string           `json:"agentId,omitempty"`
+	Assignment        *TaskAssignment  `json:"assignment,omitempty"`
+	AssignmentHistory []TaskAssignment `json:"assignmentHistory,omitempty"`
+	BlockedReason     string           `json:"blockedReason,omitempty"`
+	Result            string           `json:"result,omitempty"`
+	Evidence          []string         `json:"evidence,omitempty"`
+	Verification      []string         `json:"verification,omitempty"`
+	CreatedAt         string           `json:"createdAt"`
+	UpdatedAt         string           `json:"updatedAt"`
+}
+
+// TaskAssignment is a durable routing address, not proof that a provider is online.
+type TaskAssignment struct {
+	Harness        string `json:"harness"`
+	SessionID      string `json:"sessionId"`
+	AssignedAt     string `json:"assignedAt"`
+	EndedAt        string `json:"endedAt,omitempty"`
+	RegistrationID string `json:"registrationId,omitempty"`
 }
 
 type Run struct {
@@ -183,6 +196,16 @@ func ValidateTask(task Task) error {
 	if task.Status == "completed" && len(task.Evidence) == 0 && strings.TrimSpace(task.Result) == "" {
 		return fmt.Errorf("completed tasks require result or evidence")
 	}
+	if task.Assignment != nil {
+		if err := validateTaskAssignment(*task.Assignment); err != nil {
+			return err
+		}
+	}
+	for _, assignment := range task.AssignmentHistory {
+		if err := validateTaskAssignment(assignment); err != nil {
+			return fmt.Errorf("invalid assignment history: %w", err)
+		}
+	}
 	seen := map[string]bool{}
 	for _, dependency := range task.DependsOn {
 		if err := ValidateID(dependency); err != nil {
@@ -195,6 +218,36 @@ func ValidateTask(task Task) error {
 			return fmt.Errorf("duplicate dependency %q", dependency)
 		}
 		seen[dependency] = true
+	}
+	return nil
+}
+
+func validateTaskAssignment(assignment TaskAssignment) error {
+	if err := ValidateID(assignment.Harness); err != nil {
+		return fmt.Errorf("invalid assignment harness: %w", err)
+	}
+	if err := ValidateProviderSessionID(assignment.SessionID); err != nil {
+		return err
+	}
+	if _, err := time.Parse(time.RFC3339Nano, assignment.AssignedAt); err != nil {
+		return fmt.Errorf("invalid assignedAt: %w", err)
+	}
+	if assignment.EndedAt != "" {
+		if _, err := time.Parse(time.RFC3339Nano, assignment.EndedAt); err != nil {
+			return fmt.Errorf("invalid endedAt: %w", err)
+		}
+	}
+	return nil
+}
+
+func ValidateProviderSessionID(id string) error {
+	if id == "" || strings.TrimSpace(id) != id || len(id) > 512 {
+		return fmt.Errorf("session id must be nonempty, trimmed, and at most 512 bytes")
+	}
+	for _, r := range id {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("session id contains a control character")
+		}
 	}
 	return nil
 }

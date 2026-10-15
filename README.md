@@ -121,7 +121,8 @@ validate the project file structure, safely read or write project files, persist
 goals, tasks, runs, portable memory records, and handoffs, compute a local
 Coordinator plan, register repositories, and create or remove local Git
 worktrees. Agents can register and discover local session presence with bounded
-leases. The next runtime capabilities are:
+leases. Tasks can be assigned to a provider session and discovered later through
+that session's inbox, without waking the provider. The next runtime capabilities are:
 
 1. Project goals, instructions, measurable key results, memory, and evidence;
 2. Repository clone, remote branch, and execution backend adapters;
@@ -144,6 +145,10 @@ go build -o ./bin/hp ./cmd/hp
 ./bin/hp agent register --project ./my-project --harness codex \
   --session-id "$CODEX_THREAD_ID" --modules api --capabilities go,testing
 ./bin/hp agent discover --project ./my-project --module api
+./bin/hp task assign --project ./my-project --id inventory-api \
+  --harness codex --session-id "$CODEX_THREAD_ID"
+./bin/hp task inbox --project ./my-project --harness codex \
+  --session-id "$CODEX_THREAD_ID"
 ./bin/hp worklog create --project ./my-project --id session-001 --agent codex \
   --objective 'Implement a feature' --completed 'Added the code' \
   --remaining 'Add review' --next 'Run tests'

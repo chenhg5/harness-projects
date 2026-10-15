@@ -31,6 +31,8 @@ provider-neutral task and run records.
 
 This RFC covers local CLI execution through provider adapters. It does not
 define remote/cloud dispatch, messaging bridges, or a common transcript format.
+Task assignment and voluntary inbox discovery are defined in RFC 0005 and do
+not require this execution transport.
 It does not imply that one provider's session can be resumed by another
 provider. Cross-harness continuation uses project goals, tasks, work logs,
 handoffs, artifacts, and verification evidence.

@@ -51,6 +51,11 @@ The project-level controller. It turns goals into tasks, resolves dependencies,
 routes tasks to execution backends, collects results, requests approval, and
 decides whether to continue, retry, replan, or stop.
 
+Routing can stop at durable assignment: a task names a harness and provider
+session ID, and that session discovers the task through its project inbox.
+Directly waking or resuming a provider is an optional later step. Assignment
+does not imply the recipient has seen or started the task.
+
 The Coordinator MUST be able to operate without directly editing source code.
 Code changes belong to execution Agents. A deployment MAY combine Coordinator
 and executor behavior for a single harness when that is how the provider works.

@@ -12,7 +12,7 @@ Examples:
 Commands:
   project init|status|validate|serve Create, inspect, and view Harness Projects
   goal create|list|get|update     Manage long-lived project goals
-  task create|list|get|update|ready Manage dependent work items
+  task create|list|get|update|ready|assign|unassign|inbox Manage dependent work items
   run create|list|get|update      Manage execution attempts
   agent register|discover|get|heartbeat|unregister|prune Discover agent sessions
   repository add|list|get         Register participating code repositories
@@ -34,7 +34,7 @@ Exit codes: 0 success, 1 operation/validation error, 2 usage, 3 not found,
 var groupHelp = map[string]string{
 	"project":     "Project commands: init, status, validate, serve\nExample: hp project serve --path ./my-project --open\n",
 	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
-	"task":        "Task commands: create, list, get, update, ready\nExample: hp task ready --project ./my-project\n",
+	"task":        "Task commands: create, list, get, update, ready, assign, unassign, inbox\nExample: hp task inbox --project ./my-project --harness codex --session-id <id>\n",
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
 	"agent":       "Agent commands: register, discover, get, heartbeat, unregister, prune\nExample: hp agent discover --project ./my-project\n",
 	"repository":  "Repository commands: add, list, get\nExample: hp repository add --project ./my-project --id api --path ../api\n",
@@ -103,6 +103,15 @@ var commandHelp = map[string]string{
 `,
 	"task ready": `hp task ready --project <directory> [--format json|text]
   Compute tasks whose dependencies are complete and which can be dispatched.
+`,
+	"task assign": `hp task assign --project <directory> --id <task-id> (--registration-id <id> | --harness <name> --session-id <provider-id>) [--replace] [--dry-run]
+  Persist a task assignment to a provider session. This does not start the provider. A registration must be live; explicit harness and session ID allow assignment while offline.
+`,
+	"task unassign": `hp task unassign --project <directory> --id <task-id> [--dry-run]
+  Remove the current assignment and retain its history.
+`,
+	"task inbox": `hp task inbox --project <directory> --harness <name> --session-id <provider-id> [--ready-only] [--all] [--format json|text]
+  Discover tasks assigned to this exact provider session. Includes readiness and dependency details; completed and cancelled tasks are hidden unless --all is set.
 `,
 	"run create": `hp run create --project <directory> --id <id> --task-id <id> [--adapter local] [--harness <name>] [--agent-id <id>] [--objective <text>] [--command <command>] [--worktree <path>] [--dry-run]
   Record a planned execution attempt. It does not start a provider process.
@@ -242,6 +251,9 @@ var commandSchemas = map[string]commandSchema{
 	"task get":         {"task get", "Read a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task get --project ./my-project --id inventory-api --json"}},
 	"task update":      {"task update", "Update a project task", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.TaskStatuses()}, {"deliverables", "string", false, nil}, {"acceptance", "string", false, nil}, {"priority", "enum", false, []string{"critical", "high", "medium", "low"}}, {"owner", "string", false, nil}, {"blocked-reason", "string", false, nil}, {"result", "string", false, nil}, {"evidence", "string", false, nil}, {"verification", "string", false, nil}, {"depends-on", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task update --project ./my-project --id inventory-api --status completed --evidence verification/2026-10-14.md"}},
 	"task ready":       {"task ready", "List dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task ready --project ./my-project --json"}},
+	"task assign":      {"task assign", "Assign a task to a provider session without starting it", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"registration-id", "string", false, nil}, {"harness", "string", false, nil}, {"session-id", "string", false, nil}, {"replace", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task assign --project ./my-project --id inventory-api --registration-id <id>"}},
+	"task unassign":    {"task unassign", "Unassign a task while preserving its assignment history", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task unassign --project ./my-project --id inventory-api"}},
+	"task inbox":       {"task inbox", "List tasks assigned to a provider session", []flagSchema{{"project", "string", true, nil}, {"harness", "string", true, nil}, {"session-id", "string", true, nil}, {"ready-only", "boolean", false, nil}, {"all", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task inbox --project ./my-project --harness codex --session-id <provider-id> --json"}},
 	"run create":       {"run create", "Create a planned execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"adapter", "string", false, nil}, {"harness", "string", false, nil}, {"agent-id", "string", false, nil}, {"objective", "string", false, nil}, {"command", "string", false, nil}, {"worktree", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run create --project ./my-project --id run-001 --task-id inventory-api --objective 'Verify API'"}},
 	"run list":         {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
 	"run get":          {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},

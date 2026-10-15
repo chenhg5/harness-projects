@@ -23,3 +23,5 @@ All notable changes to Harness Projects will be documented here.
   multi-platform Makefile archives, checksum generation, and `INSTALL.md`.
 - Added local agent session registration and discovery with capability filters,
   expiring leases, stale pruning, and project entry-point instructions.
+- Added durable task assignment to provider sessions, self-service task inboxes
+  with dependency readiness, and preserved reassignment history.

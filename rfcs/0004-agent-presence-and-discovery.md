@@ -89,10 +89,11 @@ in `agents/`, and durable work outcomes remain in `worklogs/`, `handoffs/`,
 tasks, and runs. The registry records are JSON so agents can inspect them, but
 the CLI is the write interface.
 
-Registration makes an agent discoverable, not automatically addressable. Before
-another agent sends it work, the Coordinator must know a supported transport
-for that harness and verify that the session can safely receive work. A CLI
-adapter must not resume a session that may already be active elsewhere.
+Registration makes an agent discoverable, not automatically reachable. A task
+may be durably assigned to its session without sending a message, as defined
+in RFC 0005. Before attempting direct CLI delivery, the Coordinator must know
+a supported transport and verify that the session can safely receive work. A
+CLI adapter must not resume a session that may already be active elsewhere.
 
 ## Scenarios
 
