@@ -2,6 +2,16 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## v0.0.5 - 2026-10-15
+
+- Persist agent session participation in project Git under `agents/sessions/`.
+  Discovery and task assignment keep working after a local delivery hint expires.
+- Keep machine-local leases only for safe direct CLI delivery. Ending or pruning
+  a hint no longer removes a participant; unsafe delivery still falls back to
+  the task inbox.
+- Update project templates, the RFCs, and English and Chinese documentation to
+  distinguish durable participation from direct-delivery readiness.
+
 ## v0.0.4 - 2026-10-15
 
 - Added `hp coordinator dispatch` for explicit-session CLI delivery to Codex,
