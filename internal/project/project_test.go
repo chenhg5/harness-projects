@@ -2,6 +2,7 @@ package project
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -39,6 +40,26 @@ func TestInitRequiresIfNotExists(t *testing.T) {
 	}
 	if plan, _, err := PlanInit(root, "Demo", true, time.Now()); err != nil || plan.Created {
 		t.Fatalf("expected idempotent init, plan=%#v err=%v", plan, err)
+	}
+}
+
+func TestExistingProjectWithoutOptionalWakeupPrompt(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	plan, files, err := PlanInit(root, "Demo", false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyInit(plan, files); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(root, "agents", "coordinator-wakeup.md")); err != nil {
+		t.Fatal(err)
+	}
+	if status := Inspect(root); !status.Valid {
+		t.Fatalf("optional prompt invalidated project: %v", status.Problems)
+	}
+	if plan, _, err := PlanInit(root, "Demo", true, time.Now()); err != nil || plan.Created {
+		t.Fatalf("existing project rejected: plan=%+v err=%v", plan, err)
 	}
 }
 

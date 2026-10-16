@@ -133,6 +133,8 @@ provider process starts but delivery cannot be confirmed, the status is
 `uncertain` and automatic retries stop. Inspect the logs shown by `hp wakeup
 status` before `hp wakeup once --retry`. No scheduler is started by project
 initialization, and a session registration alone does not create a wakeup.
+The wakeup routine is a generated convenience file, not a required project
+file: older projects remain valid and agents can register without it.
 
 Machine-local direct-delivery hints live under `.harness-project/agent-sessions/`
 and are ignored by Git. They expire after two hours by default. `hp agent

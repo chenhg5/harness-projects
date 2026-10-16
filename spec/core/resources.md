@@ -77,6 +77,11 @@ retry MUST stop until the logs are inspected and a retry is explicitly
 requested. Local scheduler checkpoints and provider logs SHOULD remain
 outside project Git.
 
+The Coordinator assignment, wakeup schedule, and wakeup routine are optional.
+Their absence MUST NOT invalidate a project or prevent agent registration,
+discovery, task work, or other unrelated commands. A configured wakeup MUST
+validate its referenced routine before attempting delivery.
+
 ## State snapshot
 
 `state/project-state.json` is a materialized control-plane snapshot. It MUST

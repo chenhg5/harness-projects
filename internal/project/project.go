@@ -141,6 +141,12 @@ var fileOrder = []string{
 	".harness-project/project.json", ".cursor/rules/harness-project.mdc",
 }
 
+// Templates can be generated for new projects without becoming requirements
+// for projects created before the feature existed.
+var optionalFiles = map[string]bool{
+	"agents/coordinator-wakeup.md": true,
+}
+
 func ApplyInit(plan InitResult, files map[string][]byte) error {
 	if !plan.Created {
 		return nil
@@ -220,6 +226,9 @@ func Inspect(path string) Status {
 	}
 	for _, relative := range fileOrder {
 		info, err := os.Stat(filepath.Join(root, relative))
+		if errors.Is(err, os.ErrNotExist) && optionalFiles[relative] {
+			continue
+		}
 		if err != nil || info.IsDir() {
 			status.Problems = append(status.Problems, "missing file: "+relative)
 		}

@@ -2,6 +2,13 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## v0.0.7 - 2026-10-16
+
+- Fix project validation so an absent optional Coordinator wakeup routine does
+  not block agent registration or unrelated CLI commands in existing projects.
+- Keep generating the routine for new projects and require it only when a
+  wakeup schedule explicitly references it.
+
 ## v0.0.6 - 2026-10-16
 
 - Add an explicit, transferable Coordinator role for registered sessions with

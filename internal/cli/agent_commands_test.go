@@ -2,10 +2,42 @@ package cli
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestAgentRegistrationDoesNotRequireWakeupPrompt(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "legacy-project")
+	if code, _, stderr := run(t, "project", "init", "--path", root); code != 0 {
+		t.Fatalf("init: %d %s", code, stderr)
+	}
+	if err := os.Remove(filepath.Join(root, "agents", "coordinator-wakeup.md")); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run(t, "project", "validate", "--path", root); code != 0 {
+		t.Fatalf("validate: %d %s", code, stderr)
+	}
+	code, output, stderr := run(t, "agent", "register", "--project", root, "--harness", "codex", "--session-id", "existing-session")
+	if code != 0 || stderr != "" {
+		t.Fatalf("register: %d %s", code, stderr)
+	}
+	var result struct {
+		Agent struct {
+			ID string `json:"id"`
+		} `json:"agent"`
+	}
+	if err := json.Unmarshal([]byte(output), &result); err != nil || result.Agent.ID == "" {
+		t.Fatalf("registration result: %s: %v", output, err)
+	}
+	if code, _, stderr := run(t, "coordinator", "assign", "--project", root, "--registration-id", result.Agent.ID); code != 0 {
+		t.Fatalf("coordinator assignment: %d %s", code, stderr)
+	}
+	if code, _, stderr := run(t, "wakeup", "status", "--project", root); code != 0 {
+		t.Fatalf("optional wakeup status: %d %s", code, stderr)
+	}
+}
 
 func TestAgentRegistrationDiscoveryLifecycle(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "project")
