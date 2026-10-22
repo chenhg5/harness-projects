@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/chenhg5/harness-projects/internal/session"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,8 +38,8 @@ func currentCoordinatorID(root string) (string, error) {
 func (a app) agentRegister(args []string) int {
 	fs := newFlags("agent register")
 	projectPath := fs.String("project", "", "project directory (required)")
-	harness := fs.String("harness", "", "codex|claude-code|cursor|other harness name (required)")
-	sessionID := fs.String("session-id", "", "current provider session ID (required)")
+	harness := fs.String("harness", "", "codex|claude-code|cursor|other harness name (detected when omitted)")
+	sessionID := fs.String("session-id", "", "current provider session ID (detected when omitted)")
 	worktree := fs.String("worktree", "", "working directory, relative to project root if not absolute")
 	taskID := fs.String("task-id", "", "current project task ID")
 	availability := fs.String("availability", "", "local delivery hint: available|busy|paused (defaults to busy)")
@@ -51,8 +52,12 @@ func (a app) agentRegister(args []string) int {
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
 	}
-	if *projectPath == "" || *harness == "" || *sessionID == "" {
-		return a.parseError(fmt.Errorf("--project, --harness, and --session-id are required"))
+	session.Fill(harness, sessionID)
+	if *projectPath == "" {
+		return a.parseError(fmt.Errorf("--project is required"))
+	}
+	if *harness == "" || *sessionID == "" {
+		return a.fail(failure{2, "invalid_arguments", "could not detect the provider session", sessionHint, "--session-id"})
 	}
 	ttl, err := parseAgentTTL(*ttlText)
 	if err != nil {

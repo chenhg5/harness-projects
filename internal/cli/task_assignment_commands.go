@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/chenhg5/harness-projects/internal/session"
 	"strings"
 
 	"github.com/chenhg5/harness-projects/internal/model"
@@ -131,16 +132,20 @@ func (a app) taskUnassign(args []string) int {
 func (a app) taskInbox(args []string) int {
 	fs := newFlags("task inbox")
 	projectPath := fs.String("project", "", "project directory (required)")
-	harness := fs.String("harness", "", "current harness (required)")
-	sessionID := fs.String("session-id", "", "current provider session ID (required)")
+	harness := fs.String("harness", "", "current harness (detected when omitted)")
+	sessionID := fs.String("session-id", "", "current provider session ID (detected when omitted)")
 	readyOnly := fs.Bool("ready-only", false, "show only tasks ready to start")
 	all := fs.Bool("all", false, "include completed and cancelled tasks")
 	format, jsonFlag := outputFlags(fs)
 	if err := parse(fs, args); err != nil {
 		return a.parseError(err)
 	}
-	if *projectPath == "" || *harness == "" || *sessionID == "" {
-		return a.parseError(fmt.Errorf("--project, --harness, and --session-id are required"))
+	session.Fill(harness, sessionID)
+	if *projectPath == "" {
+		return a.parseError(fmt.Errorf("--project is required"))
+	}
+	if *harness == "" || *sessionID == "" {
+		return a.fail(failure{2, "invalid_arguments", "could not detect the provider session", sessionHint, "--session-id"})
 	}
 	canonical, err := presence.CanonicalHarness(*harness)
 	if err != nil {
