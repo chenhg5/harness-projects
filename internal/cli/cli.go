@@ -190,6 +190,12 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.wakeupOnce(args[2:])
 	case "wakeup start":
 		return a.wakeupStart(args[2:])
+	case "hook session-start":
+		return a.hookSessionStart(args[2:])
+	case "hook stop":
+		return a.hookStop(args[2:])
+	case "hook install":
+		return a.hookInstall(args[2:])
 	case "schema list":
 		return a.schemaList(args[2:])
 	case "schema get":

@@ -25,6 +25,7 @@ Commands:
   worklog create|list|latest      Record and read agent work sessions
   cleanup plan|apply              Archive stale transient files safely
   state get|update|validate       Inspect and update the project control snapshot
+  hook install|session-start|stop  Harness lifecycle hooks: brief at start, progress reminder at stop
   coordinator assign|get|clear|plan|dispatch Manage the Coordinator and dispatch
   wakeup configure|status|once|start Schedule and run Coordinator wakeups
   file write|read                 Write and read project files
@@ -48,6 +49,7 @@ var groupHelp = map[string]string{
 	"worklog":     "Work log commands: create, list, latest\nExample: hp worklog latest --project ./my-project\n",
 	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
 	"state":       "State commands: get, update, validate\nExample: hp state validate --project ./my-project\n",
+	"hook":        "Hook commands: install, session-start, stop\nExample: hp hook install --project ./my-project\n",
 	"coordinator": "Coordinator commands: assign, get, clear, plan, dispatch\nExample: hp coordinator assign --project ./my-project --registration-id <id>\n",
 	"wakeup":      "Wakeup commands: configure, status, once, start\nExample: hp wakeup configure --project ./my-project --every 30m --worktree repos/api --prompt-file agents/coordinator-wakeup.md\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
@@ -55,6 +57,20 @@ var groupHelp = map[string]string{
 }
 
 var commandHelp = map[string]string{
+	"hook install": `hp hook install [--project <directory>] [--dry-run] [--format json|text]
+  Add the hp SessionStart and Stop hooks to the project's .claude/settings.json, keeping other settings.
+  New projects get them from hp project init.
+  Example: hp hook install --project ./my-project
+`,
+	"hook session-start": `hp hook session-start --harness <claude-code|codex|other> [--project <directory>]
+  Run by a harness SessionStart hook. Reads the hook JSON on stdin, registers the session,
+  exports HP_HARNESS and HP_SESSION_ID through CLAUDE_ENV_FILE when present, and prints hp brief.
+  Never fails the session; problems go to stderr.
+`,
+	"hook stop": `hp hook stop --harness <claude-code|codex|other> [--project <directory>]
+  Run by a harness Stop hook. If the session changed project or repository files and wrote no
+  work log or handoff, asks the agent once to record progress. Never fails the session.
+`,
 	"brief": `hp brief [--project <directory>] [--full] [--lines <n>] [--format json|text]
   Print a short orientation for a new agent session: current goal, state, next actions,
   in-progress/ready/blocked tasks, current plan, latest work log and handoff.
@@ -62,8 +78,9 @@ var commandHelp = map[string]string{
   Example: hp brief
   Example: hp brief --project ./my-project --format text --full
 `,
-	"project init": `hp project init --path <directory> [--name <name>] [--if-not-exists] [--dry-run] [--format json|text]
-  Create a portable Harness Project with spec, handoff, skill, state, and harness entry points.
+	"project init": `hp project init --path <directory> [--name <name>] [--if-not-exists] [--no-git] [--dry-run] [--format json|text]
+  Create a portable Harness Project with spec, handoff, skill, state, and harness entry points,
+  Claude Code session hooks, and its own Git repository with an initial commit (skip with --no-git).
   Example: hp project init --path ./checkout --name "Checkout" --dry-run
   Example: hp project init --path ./checkout --if-not-exists --json
 `,
@@ -122,7 +139,7 @@ var commandHelp = map[string]string{
 	"task unassign": `hp task unassign --project <directory> --id <task-id> [--dry-run]
   Remove the current assignment and retain its history.
 `,
-	"task inbox": `hp task inbox --project <directory> --harness <name> --session-id <provider-id> [--ready-only] [--all] [--format json|text]
+	"task inbox": `hp task inbox --project <directory> [--harness <name>] [--session-id <provider-id>] [--ready-only] [--all] [--format json|text]
   Discover tasks assigned to this exact provider session. Includes readiness and dependency details; completed and cancelled tasks are hidden unless --all is set.
 `,
 	"run create": `hp run create --project <directory> --id <id> --task-id <id> [--adapter local] [--harness <name>] [--agent-id <id>] [--objective <text>] [--command <command>] [--worktree <path>] [--dry-run]
@@ -137,7 +154,7 @@ var commandHelp = map[string]string{
 	"run update": `hp run update --project <directory> --id <id> [--status <status>] [--commit <sha>] [--changed-files a,b] [--verification a,b] [--logs a,b] [--error <message>] [--dry-run]
   Update run state and record timestamps for terminal states.
 `,
-	"agent register": `hp agent register --project <directory> --harness <name> --session-id <provider-id> [--worktree <path>] [--task-id <id>] [--availability available|busy|paused] [--focus <text>] [--modules a,b] [--capabilities a,b] [--ttl 2h] [--dry-run]
+	"agent register": `hp agent register --project <directory> [--harness <name>] [--session-id <provider-id>] [--worktree <path>] [--task-id <id>] [--availability available|busy|paused] [--focus <text>] [--modules a,b] [--capabilities a,b] [--ttl 2h] [--dry-run]
   Record this provider session as a durable project participant and create a local delivery hint. cc is an alias for claude-code. The CLI cannot infer your session ID.
 `,
 	"agent discover": `hp agent discover --project <directory> [--harness <name>] [--module <name>] [--capability <name>] [--include-stale] [--format json|text]
@@ -273,8 +290,11 @@ type commandSchema struct {
 }
 
 var commandSchemas = map[string]commandSchema{
+	"hook install":         {"hook install", "Install Claude Code session hooks in a project", []flagSchema{{"project", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp hook install --project ./my-project"}},
+	"hook session-start":   {"hook session-start", "Session start hook: register the session and print the brief", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook session-start --harness claude-code"}},
+	"hook stop":            {"hook stop", "Stop hook: ask once for a work log after changes", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook stop --harness claude-code"}},
 	"brief":                {"brief", "Summarize the project for a new agent session", []flagSchema{{"project", "string", false, nil}, {"full", "boolean", false, nil}, {"lines", "integer", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp brief --format text"}},
-	"project init":         {"project init", "Create a Harness Project", []flagSchema{{"path", "string", true, nil}, {"name", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project init --path ./my-project --dry-run"}},
+	"project init":         {"project init", "Create a Harness Project", []flagSchema{{"path", "string", true, nil}, {"name", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"no-git", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project init --path ./my-project --dry-run"}},
 	"project status":       {"project status", "Inspect a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project status --path ./my-project --json"}},
 	"project validate":     {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},
 	"project serve":        {"project serve", "Serve a read-only local project dashboard", []flagSchema{{"path", "string", true, nil}, {"port", "integer", false, nil}, {"open", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project serve --path ./my-project --open"}},
@@ -290,12 +310,12 @@ var commandSchemas = map[string]commandSchema{
 	"task ready":           {"task ready", "List dispatchable tasks", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task ready --project ./my-project --json"}},
 	"task assign":          {"task assign", "Assign a task to a provider session without starting it", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"registration-id", "string", false, nil}, {"harness", "string", false, nil}, {"session-id", "string", false, nil}, {"replace", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task assign --project ./my-project --id inventory-api --registration-id <id>"}},
 	"task unassign":        {"task unassign", "Unassign a task while preserving its assignment history", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task unassign --project ./my-project --id inventory-api"}},
-	"task inbox":           {"task inbox", "List tasks assigned to a provider session", []flagSchema{{"project", "string", true, nil}, {"harness", "string", true, nil}, {"session-id", "string", true, nil}, {"ready-only", "boolean", false, nil}, {"all", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task inbox --project ./my-project --harness codex --session-id <provider-id> --json"}},
+	"task inbox":           {"task inbox", "List tasks assigned to a provider session", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"session-id", "string", false, nil}, {"ready-only", "boolean", false, nil}, {"all", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp task inbox --project ./my-project --harness codex --session-id <provider-id> --json"}},
 	"run create":           {"run create", "Create a planned execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"adapter", "string", false, nil}, {"harness", "string", false, nil}, {"agent-id", "string", false, nil}, {"objective", "string", false, nil}, {"command", "string", false, nil}, {"worktree", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run create --project ./my-project --id run-001 --task-id inventory-api --objective 'Verify API'"}},
 	"run list":             {"run list", "List execution runs", []flagSchema{{"project", "string", true, nil}, {"task-id", "string", false, nil}, {"status", "enum", false, model.RunStatuses()}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run list --project ./my-project --json"}},
 	"run get":              {"run get", "Read an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run get --project ./my-project --id run-001 --json"}},
 	"run update":           {"run update", "Update an execution run", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"status", "enum", false, model.RunStatuses()}, {"worktree", "string", false, nil}, {"commit", "string", false, nil}, {"changed-files", "string", false, nil}, {"verification", "string", false, nil}, {"logs", "string", false, nil}, {"approval", "string", false, nil}, {"exit-code", "integer", false, nil}, {"error", "string", false, nil}, {"artifacts", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp run update --project ./my-project --id run-001 --status running"}},
-	"agent register":       {"agent register", "Record a project participant and local delivery hint", []flagSchema{{"project", "string", true, nil}, {"harness", "string", true, nil}, {"session-id", "string", true, nil}, {"worktree", "string", false, nil}, {"task-id", "string", false, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"modules", "string", false, nil}, {"capabilities", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent register --project ./my-project --harness codex --session-id <provider-id> --modules api --capabilities go,testing"}},
+	"agent register":       {"agent register", "Record a project participant and local delivery hint", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"session-id", "string", false, nil}, {"worktree", "string", false, nil}, {"task-id", "string", false, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"modules", "string", false, nil}, {"capabilities", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent register --project ./my-project --harness codex --session-id <provider-id> --modules api --capabilities go,testing"}},
 	"agent discover":       {"agent discover", "Find all registered project participants", []flagSchema{{"project", "string", true, nil}, {"harness", "string", false, nil}, {"module", "string", false, nil}, {"capability", "string", false, nil}, {"role", "enum", false, []string{"coordinator"}}, {"include-stale", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent discover --project ./my-project --role coordinator --json"}},
 	"agent get":            {"agent get", "Read an agent session registration", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent get --project ./my-project --id <registration-id>"}},
 	"agent heartbeat":      {"agent heartbeat", "Renew a local delivery hint", []flagSchema{{"project", "string", true, nil}, {"id", "string", true, nil}, {"availability", "enum", false, []string{"available", "busy", "paused"}}, {"focus", "string", false, nil}, {"ttl", "duration", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp agent heartbeat --project ./my-project --id <registration-id> --availability available"}},
