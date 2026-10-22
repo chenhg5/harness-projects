@@ -249,3 +249,22 @@ func Inspect(path string) Status {
 	status.Valid = len(status.Problems) == 0
 	return status
 }
+
+// Find returns the nearest directory at or above start that holds a project
+// manifest, so commands work from inside nested repository worktrees.
+func Find(start string) (string, error) {
+	dir, err := ResolvePath(start)
+	if err != nil {
+		return "", err
+	}
+	for {
+		if info, err := os.Stat(filepath.Join(dir, ".harness-project", "project.json")); err == nil && info.Mode().IsRegular() {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("no Harness Project found at or above %s: %w", start, os.ErrNotExist)
+		}
+		dir = parent
+	}
+}
