@@ -112,9 +112,10 @@ func Load(root string, maxLines int) (Brief, error) {
 	for _, repository := range summary.Repositories {
 		b.Repositories = append(b.Repositories, repository.ID)
 	}
+	where := quote(displayPath(b.Path))
 	b.WhenDone = []string{
-		"hp task update --project " + quote(b.Path) + " --id <task> --status <in_progress|completed|blocked>",
-		"hp worklog create --project " + quote(b.Path) + " --id <slug> --agent <you> --objective ... --completed ... --remaining ... --next ...",
+		"hp task update --project " + where + " --id <task> --status <in_progress|completed|blocked>",
+		"hp worklog create --project " + where + " --id <slug> --agent <you> --objective ... --completed ... --remaining ... --next ...",
 	}
 	return b, nil
 }
@@ -226,6 +227,22 @@ func excerpt(name, content string, maxLines int) *Note {
 		note.Truncated = true
 	}
 	return note
+}
+
+// displayPath shortens root relative to the working directory when that is shorter.
+func displayPath(root string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return root
+	}
+	if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = resolved
+	}
+	relative, err := filepath.Rel(cwd, root)
+	if err != nil || len(relative) >= len(root) {
+		return root
+	}
+	return relative
 }
 
 func quote(path string) string {

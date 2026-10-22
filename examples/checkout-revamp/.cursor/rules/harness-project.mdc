@@ -1,0 +1,6 @@
+---
+description: Shared Harness Project context
+alwaysApply: true
+---
+
+Run `hp brief` at the start of work and read `AGENTS.md` and `PROJECT.md`. Use `state/current-plan.md`, `spec/`, and `handoffs/` for portable project context, and record progress with `hp worklog create` before stopping.

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1",
+  "updatedAt": "2026-10-22T05:15:32Z",
+  "currentGoalId": "faster-checkout",
+  "currentPhase": "build",
+  "health": "at_risk",
+  "progress": "2 of 6 tasks done; median checkout 48s (target 30s)",
+  "activeTaskIds": [
+    "single-payment-call"
+  ],
+  "blockedTaskIds": [
+    "provider-sandbox"
+  ],
+  "nextActions": [
+    "Add an idempotency key to POST /payments",
+    "Ask finance for provider sandbox keys"
+  ],
+  "risks": [
+    "Combined capture is untested against the real provider sandbox"
+  ],
+  "sourceRefs": [
+    "state/current-plan.md",
+    "spec/payment-flow.md"
+  ]
+}

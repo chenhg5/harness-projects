@@ -1,6 +1,6 @@
 <h1 align="center">Harness Projects</h1>
-<p align="center"><strong>One project. Many repositories. Any coding agent.</strong></p>
-<p align="center">An open, Git-backed Projects workspace for Claude Code, Cursor, Codex, and other coding harnesses.</p>
+<p align="center"><strong>Every new agent session starts from zero. Yours don't have to.</strong></p>
+<p align="center">Git-backed project memory that Claude Code, Codex, and Cursor read at the start of every session, so any agent picks up exactly where the last one stopped.</p>
 
 <p align="center">
   <a href="https://github.com/chenhg5/harness-projects/releases"><img alt="Release" src="https://img.shields.io/github/v/release/chenhg5/harness-projects?label=release"></a>
@@ -11,166 +11,111 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
+  <a href="#try-the-example">Example</a> ·
   <a href="#how-it-works">How it works</a> ·
-  <a href="#what-works-today">Features</a> ·
   <a href="docs/cli.md">CLI guide</a> ·
   <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 ---
 
-Claude Code Projects and Cursor Projects point toward a richer way to organize long-running agent work. Harness Projects brings that idea into an open workspace: goals, tasks, context, session assignments, work logs, and verification live in files that every harness can read.
+If you work with coding agents on anything longer than one session, you know these:
 
-`hp` is the Go CLI that creates and maintains that workspace. It can route a task to an **explicit existing session** through a supported provider CLI. When direct delivery cannot begin safely, the assignment stays in that session's inbox.
+- **A new session knows nothing.** You re-explain the goal, the decisions, and what is half done, every time.
+- **Switching tools loses everything.** What Codex did yesterday is invisible to Claude Code today.
+- **Parallel agents and multiple repositories drift.** Nobody holds the plan, so work is repeated or contradicts itself.
 
-> **A project can span repositories.** A Harness Project has its own Git history for coordination. Its `repos/` directory can contain several independent source repositories and worktrees. One feature can span all of them.
+Harness Projects keeps the goal, plan, tasks, decisions, and session notes in plain files in their own Git repository. A session-start hook hands every new agent a short **brief**, and a stop hook makes sure it leaves notes for the next one.
+
+<p align="center">
+  <img src="docs/assets/brief-demo.svg" alt="A new Claude Code session receives hp brief at start and continues the work another agent left" width="800">
+</p>
+<p align="center"><sub>Condensed from a real run on <a href="examples/checkout-revamp">examples/checkout-revamp</a>. The agent's reply is verbatim; it had no chat history, only the brief.</sub></p>
 
 ## Quick start
 
-Install the latest release on macOS or Linux:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chenhg5/harness-projects/main/install.sh | sh
-hp --version
+hp project init --path ./my-project --name "My Project"
+cd my-project && claude
 ```
 
-The installer downloads a release archive and verifies its SHA-256 checksum. You can also [install with Go or download an archive](INSTALL.md).
+That is all. `hp project init` creates the project as its own Git repository, with instructions for every harness and Claude Code hooks already configured. From now on:
 
-Create a project and open its local dashboard:
+| When | What happens |
+| --- | --- |
+| A session starts | The agent receives `hp brief`: goal, next actions, in-progress, ready and blocked tasks, the plan, and what the last session left unfinished. The session registers itself; no IDs to copy. |
+| The agent works | It updates tasks with `hp task update` and records decisions in `spec/`. |
+| The session stops | If it changed files without leaving a note, it is asked once to write `hp worklog create` (or `hp handoff create` for someone else). |
+
+Tell the agent what you want in plain words ("set the goal: cut checkout time in half, then plan the tasks"); the generated `AGENTS.md` and project skill teach it the commands.
+
+**Codex and Cursor** read the generated `AGENTS.md` and Cursor rule, which start every session with `hp brief`. Codex sessions are detected automatically through `CODEX_THREAD_ID`. **An existing project** gets the Claude Code hooks with `hp hook install`. Other install options are in [INSTALL.md](INSTALL.md).
+
+## Try the example
 
 ```bash
-hp project init --path ./my-project --name "My Project"
-hp project validate --path ./my-project
-hp project serve --path ./my-project --open
+git clone https://github.com/chenhg5/harness-projects && cd harness-projects/examples/checkout-revamp
+hp brief
 ```
 
-The generated project includes shared instructions, goal and task directories, a project-context skill, and entry points for Codex, Claude Code, and Cursor. The dashboard shows goals, task progress, project state, repositories, and recent activity in English or Simplified Chinese.
+[`examples/checkout-revamp`](examples/checkout-revamp) is a complete project mid-flight: one goal, six tasks across two repositories (done, in progress, ready, blocked), a design decision, a Codex work log, and a Codex → Claude Code handoff. Open it with any agent and ask it to continue.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    H["Human goal"] --> P["Harness Project · Git"]
-    P --> C["hp Coordinator"]
-    C --> T["Tasks · assignments · runs"]
-    T --> A["Claude Code session"]
-    T --> B["Cursor session"]
-    T --> D["Codex session"]
-    A --> R["Repository worktrees"]
-    B --> R
-    D --> R
-    R --> E["Verification · work logs · handoffs"]
-    E --> P
-```
-
-1. **Define the outcome.** Keep the goal, completion conditions, specifications, and current plan in the project.
-2. **Route work.** Create tasks with dependencies, discover registered agent sessions, and assign a task to an exact provider session ID.
-3. **Deliver or queue.** `hp coordinator dispatch` uses the provider CLI when preflight allows it. Otherwise the task remains discoverable through `hp task inbox`.
-4. **Preserve progress.** Runs capture delivery outcomes and evidence. Work logs explain what happened; handoffs explain what the next agent should do.
-
-### A task across harnesses
-
-```bash
-cd my-project
-
-hp task create --project . --id improve-api --title "Improve the API" \
-  --description "Reduce request latency" --acceptance "Benchmark and tests pass"
-
-# The target agent records its real provider session; direct delivery has a separate safety check.
-SESSION_ID="paste-real-provider-session-id"
-hp agent register --project . --harness claude-code \
-  --session-id "$SESSION_ID" --worktree . --focus "API latency"
-
-hp coordinator dispatch --project . --task-id improve-api \
-  --harness claude-code --session-id "$SESSION_ID" \
-  --worktree . --dry-run
-
-# Remove --dry-run when the exact target and worktree are correct.
-hp coordinator dispatch --project . --task-id improve-api \
-  --harness claude-code --session-id "$SESSION_ID" --worktree .
-```
-
-The target session can inspect its assigned work with `hp task inbox --project . --harness claude-code --session-id "$SESSION_ID"`. An active Claude Code session may be queued for inbox discovery instead of resumed by a second process. A provider CLI result does **not** complete the task automatically; acceptance still needs evidence. If a process may have received the prompt but returns no clear result, the run is marked `uncertain` and is never resent automatically.
-
-### Coordinator role and scheduled wakeups
-
-Designate one registered session as the current Coordinator, then optionally
-configure a routine that wakes that role at an interval or calendar time:
-
-```bash
-hp coordinator assign --project . --registration-id <registration-id>
-hp agent discover --project . --role coordinator
-hp wakeup configure --project . --every 30m \
-  --worktree repos/api --prompt-file agents/coordinator-wakeup.md
-hp wakeup once --project . --dry-run
-hp wakeup start --project .
-```
-
-The Coordinator assignment and schedule are Git-tracked project files. A role
-handoff uses `hp coordinator assign --replace`; the schedule follows the new
-session. The scheduler runs in the foreground and keeps its delivery checkpoint
-locally. It addresses an existing session through its provider CLI and pauses
-automatic retries when the outcome is uncertain. See the [CLI guide](docs/cli.md)
-for cron, safety, and operation details.
-
-## What works today
-
-| Capability | Available in `hp` |
-| --- | --- |
-| Project workspace | Git-backed project initialization, validation, file access, and shared harness entry points |
-| Goals and work | Outcome-oriented goals, task dependencies, run records, state snapshots, and verification references |
-| Shared context | Searchable memory records, work logs, handoffs, and project-context skills |
-| Agent coordination | Durable participation, a transferable Coordinator role, exact-session inbox and CLI dispatch, and optional scheduled wakeups |
-| Source repositories | Repository registration and local Git worktree lifecycle under `repos/` |
-| Visibility | Read-only local dashboard with English and Simplified Chinese UI |
-| Maintenance | Dry-run support, structured JSON output, and bounded cleanup of transient material |
-
-Harness Projects is **local-first** today. Remote runners, external event triggers, managed background scheduling, and approval workflows are planned; the [capability map](docs/capability-map.md) tracks the boundary between the current CLI and the product target. Provider sessions remain provider-specific: cross-harness continuation uses the shared project files, not a shared hidden chat transcript.
-
-## Project layout
-
 ```text
-my-project/              # Its own Git repository
-├── PROJECT.md           # Purpose and scope
-├── AGENTS.md            # Shared agent entry point
-├── CLAUDE.md            # Claude Code entry point
-├── goals/               # Outcomes and completion conditions
-├── spec/                # Requirements and decisions
-├── state/               # Current plan and snapshot
-├── tasks/               # Dependencies and assignments
-├── runs/                # Attempts and evidence
-├── agents/sessions/     # Durable session participation
-├── agents/coordinator.json # Current Coordinator and term history
-├── agents/coordinator-wakeup.md # Editable wakeup routine
-├── context/             # Searchable project memory
-├── worklogs/            # What each session did
-├── handoffs/            # Continuation instructions
-├── verification/        # Acceptance evidence
-├── skills/              # Shared skills
-├── scripts/             # Shared scripts
-├── repos/               # Independent source repos and worktrees
-├── .codex/              # Codex skill mounts
-├── .claude/             # Claude Code skill mounts
-├── .cursor/             # Cursor rules
-└── .harness-project/    # Project metadata
+my-project/              # its own Git repository: the shared memory
+├── AGENTS.md            # how every agent works here (CLAUDE.md and a Cursor rule point to it)
+├── PROJECT.md           # purpose, scope, repositories
+├── goals/               # what done looks like
+├── state/               # current plan, next actions, health
+├── tasks/               # work items with dependencies and status
+├── spec/                # decisions and requirements
+├── worklogs/            # what each session did and left unfinished
+├── handoffs/            # explicit transfers between agents or people
+├── context/             # research and reference notes
+└── repos/               # your source repositories and worktrees (their own Git history)
 ```
 
-The coordination repository tracks the project files. Nested source repositories keep their own branches and commit histories; transient artifacts and local delivery hints are ignored by project Git; participant records are tracked.
+- **Files, not a service.** Everything is Markdown and JSON that any agent can read and any human can review in a pull request. No server, no account, no lock-in to one tool.
+- **One brief, any harness.** `hp brief` works from anywhere inside the project, including nested repository worktrees, and gives the same picture to Claude Code, Codex, Cursor, or a person.
+- **Many repositories, one plan.** A feature that touches `web` and `api` has one goal and one task graph; each repository keeps its own branches.
+- **Agent-friendly CLI.** Every `hp` command has JSON output, dry runs, and stable exit codes, so agents drive it without guessing.
 
-## Explore the project
+Open a read-only dashboard with `hp project serve --path . --open`.
+
+### Why not just…
+
+| | Keeps progress between sessions | Shared across tools | Reviewed in Git | Spans repositories |
+| --- | --- | --- | --- | --- |
+| `CLAUDE.md` / `AGENTS.md` alone | Static instructions only | Partly | Yes | No |
+| Built-in Projects or memory in one tool | Yes | No | No | No |
+| An issue tracker | Yes, if someone copies it in | Not read at session start | No | Yes |
+| **Harness Projects** | Yes | Yes | Yes | Yes |
+
+## Advanced: coordinating several agents
+
+When you run several sessions at once, `hp` can also route work between them:
+
+- `hp agent discover` lists registered sessions; `hp task inbox` shows work assigned to the current one.
+- A transferable **Coordinator** role can assign tasks and deliver them to an exact existing session with `hp coordinator dispatch`, keeping uncertain deliveries out of automatic retries.
+- `hp wakeup` wakes the Coordinator on an interval or cron schedule.
+
+See the [CLI guide](docs/cli.md) for these commands and their safety rules, and the [capability map](docs/capability-map.md) for what is planned (remote runners, event triggers, approvals).
+
+## Learn more
 
 | Read this | For |
 | --- | --- |
 | [Installation](INSTALL.md) | Release archives, Go installation, and source builds |
-| [CLI guide](docs/cli.md) | Commands, session discovery, dispatch outcomes, and the dashboard |
+| [CLI guide](docs/cli.md) | Every command, hooks, session detection, dispatch, and the dashboard |
 | [Product model](docs/product.md) | Project, Goal, Task, Run, Agent, Thread, and Coordinator concepts |
-| [Specifications](spec/README.md) and [RFCs](rfcs/README.md) | Portable file contract and design proposals |
-| [Capability map](docs/capability-map.md) | Implemented features and longer-term direction |
+| [Specifications](spec/README.md) and [RFCs](rfcs/README.md) | The portable file contract and design proposals |
 | [Changelog](CHANGELOG.md) | What changed in each release |
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow. The CLI follows the [Agent CLI Guide](https://github.com/Johnixr/agent-cli-guide): explicit arguments, structured output, dry runs, and stable exit semantics.
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). The CLI follows the [Agent CLI Guide](https://github.com/Johnixr/agent-cli-guide): explicit arguments, structured output, dry runs, and stable exit codes.
 
 ## License
 

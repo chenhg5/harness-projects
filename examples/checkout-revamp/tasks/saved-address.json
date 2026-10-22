@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "id": "saved-address",
+  "goalId": "faster-checkout",
+  "title": "Reuse the saved shipping address",
+  "priority": "high",
+  "status": "completed",
+  "dependsOn": [
+    "timing-baseline"
+  ],
+  "result": "Median 48s on staging",
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

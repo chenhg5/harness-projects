@@ -118,7 +118,7 @@ var commandHelp = map[string]string{
 	"goal update": `hp goal update --project <directory> --id <id> [--title <title>] [--description <text>] [--outcome <text>] [--method <method>] [--done-when a,b] [--evidence-required a,b] [--owner <id>] [--target-date <date>] [--key-results <json>] [--evidence a,b] [--status <status>] [--dry-run]
   Update selected goal fields.
 `,
-	"task create": `hp task create --project <directory> --id <id> --title <title> [--description <text>] [--deliverables a,b] [--acceptance a,b] [--priority critical|high|medium|low] [--owner <id>] [--due-date <date>] [--goal-id <id>] [--depends-on a,b] [--status pending|ready|blocked] [--dry-run]
+	"task create": `hp task create --project <directory> --id <id> --title <title> [--description <text>] [--deliverables a,b] [--acceptance a,b] [--priority critical|high|medium|low] [--owner <id>] [--due-date <date>] [--goal-id <id>] [--depends-on a,b] [--status pending|ready|blocked] [--blocked-reason <text>] [--dry-run]
 	Create an execution unit with deliverables, acceptance, ownership, and dependencies.
 `,
 	"task list": `hp task list --project <directory> [--status <status>] [--goal-id <id>] [--format json|text]

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "id": "single-payment-call",
+  "goalId": "faster-checkout",
+  "title": "Collapse authorize and capture into one API call",
+  "priority": "critical",
+  "status": "in_progress",
+  "dependsOn": [
+    "timing-baseline"
+  ],
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

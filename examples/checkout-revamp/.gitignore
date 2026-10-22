@@ -1,0 +1,13 @@
+# Source checkouts and generated worktrees keep their own Git history.
+/repos/*
+!/repos/README.md
+/.harness-project/worktrees/
+
+# Machine-local and generated material.
+/archive/*
+!/archive/README.md
+/artifacts/*
+!/artifacts/README.md
+/context/imports/
+*.log
+.DS_Store

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1",
+  "id": "faster-checkout",
+  "title": "Cut median checkout time from 62s to under 30s",
+  "description": "Checkout abandonment rises with every extra step. Remove the address re-entry and the second payment round trip.",
+  "outcome": "Median time from cart to order confirmation stays under 30 seconds for two consecutive weeks.",
+  "owner": "checkout-team",
+  "status": "active",
+  "doneWhen": [
+    "Median checkout time under 30s for two weeks",
+    "Abandonment rate does not increase",
+    "Both repositories released behind one feature flag"
+  ],
+  "evidenceRequired": [
+    "timing dashboard export",
+    "release links"
+  ],
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

@@ -1,0 +1,3 @@
+# Agents
+
+Session participation records live in `agents/sessions/` and remain discoverable. The current Coordinator and assignment history live in `agents/coordinator.json`; assign a registered session with `hp coordinator assign`. Its optional tracked schedule lives in `agents/coordinator-wakeup.json`, and its editable routine in `agents/coordinator-wakeup.md`. `hp wakeup start` runs a foreground scheduler; local execution state and logs remain under ignored `artifacts/`. Machine-local direct-delivery hints live under `.harness-project/agent-sessions/` and may expire without deleting participation.

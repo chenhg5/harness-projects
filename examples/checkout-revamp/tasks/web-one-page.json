@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "id": "web-one-page",
+  "goalId": "faster-checkout",
+  "title": "Merge shipping and payment into one page",
+  "priority": "high",
+  "status": "pending",
+  "dependsOn": [
+    "saved-address"
+  ],
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

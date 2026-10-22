@@ -2,6 +2,25 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## Unreleased
+
+- Add `hp brief`: a 30-second orientation for any new session (goal, state,
+  next actions, task readiness, plan, and the remaining work from the latest
+  work log and handoff). It finds the project from any nested directory.
+- Add Claude Code session hooks: `hp hook session-start` registers the session
+  and injects the brief; `hp hook stop` asks once for a work log after changes.
+  `hp hook install` adds them to existing projects.
+- Detect the current session for `hp agent register` and `hp task inbox` from
+  `HP_SESSION_ID` or Codex's `CODEX_THREAD_ID`; `--harness` and `--session-id`
+  are now optional.
+- `hp project init` creates the project's Git repository with an initial
+  commit (`--no-git` to skip), writes `.gitignore` and the Claude Code hooks,
+  prints next steps, and generated instructions start every session with
+  `hp brief`.
+- Document `--blocked-reason` for `hp task create`.
+- Rewrite the README around the problem it solves, with a demo and a complete
+  example project in `examples/checkout-revamp`.
+
 ## v0.0.7 - 2026-10-16
 
 - Fix project validation so an absent optional Coordinator wakeup routine does
