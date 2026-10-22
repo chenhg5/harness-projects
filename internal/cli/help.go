@@ -4,6 +4,9 @@ import "github.com/chenhg5/harness-projects/internal/model"
 
 const rootHelp = `Harness Projects CLI (hp)
 
+Start here:
+  hp brief                        Catch up on the project: goal, plan, tasks, latest work log and handoff
+
 Examples:
   hp project init --path ./my-project --name "My Project"
   hp project validate --path ./my-project --format json
@@ -52,6 +55,13 @@ var groupHelp = map[string]string{
 }
 
 var commandHelp = map[string]string{
+	"brief": `hp brief [--project <directory>] [--full] [--lines <n>] [--format json|text]
+  Print a short orientation for a new agent session: current goal, state, next actions,
+  in-progress/ready/blocked tasks, current plan, latest work log and handoff.
+  --project defaults to the current directory and searches parent directories.
+  Example: hp brief
+  Example: hp brief --project ./my-project --format text --full
+`,
 	"project init": `hp project init --path <directory> [--name <name>] [--if-not-exists] [--dry-run] [--format json|text]
   Create a portable Harness Project with spec, handoff, skill, state, and harness entry points.
   Example: hp project init --path ./checkout --name "Checkout" --dry-run
@@ -263,6 +273,7 @@ type commandSchema struct {
 }
 
 var commandSchemas = map[string]commandSchema{
+	"brief":                {"brief", "Summarize the project for a new agent session", []flagSchema{{"project", "string", false, nil}, {"full", "boolean", false, nil}, {"lines", "integer", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp brief --format text"}},
 	"project init":         {"project init", "Create a Harness Project", []flagSchema{{"path", "string", true, nil}, {"name", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project init --path ./my-project --dry-run"}},
 	"project status":       {"project status", "Inspect a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project status --path ./my-project --json"}},
 	"project validate":     {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},

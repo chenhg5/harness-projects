@@ -44,6 +44,13 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		}
 		args = append(args, "--help")
 	}
+	if args[0] == "brief" {
+		if hasHelp(args[1:]) {
+			fmt.Fprint(out, commandHelp["brief"])
+			return 0
+		}
+		return a.brief(args[1:])
+	}
 	if len(args) < 2 {
 		if help, ok := groupHelp[args[0]]; ok {
 			fmt.Fprint(out, help)
