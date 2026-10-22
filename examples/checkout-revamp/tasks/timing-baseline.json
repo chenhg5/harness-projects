@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1",
+  "id": "timing-baseline",
+  "goalId": "faster-checkout",
+  "title": "Instrument checkout timing",
+  "priority": "high",
+  "status": "completed",
+  "result": "Median 62s; payment round trips 9s, address re-entry 14s",
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "command -v hp \u003e/dev/null 2\u003e\u00261 \u0026\u0026 hp hook session-start --harness claude-code || true",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "command -v hp \u003e/dev/null 2\u003e\u00261 \u0026\u0026 hp hook stop --harness claude-code || true",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

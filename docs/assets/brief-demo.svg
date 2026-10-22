@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="460" viewBox="0 0 800 460" role="img" aria-label="A new Claude Code session receives hp brief at start and continues the work another agent left.">
+<title>hp brief at session start</title>
+<rect width="800" height="460" rx="10" fill="#0d1117"/>
+<rect width="800" height="34" rx="10" fill="#161b22"/><rect y="24" width="800" height="10" fill="#161b22"/>
+<circle cx="20" cy="17" r="6" fill="#ff5f56"/><circle cx="40" cy="17" r="6" fill="#ffbd2e"/><circle cx="60" cy="17" r="6" fill="#27c93f"/>
+<text x="400" y="22" fill="#7d8590" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13" text-anchor="middle">examples/checkout-revamp</text>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14.5">
+<text x="24" y="56" fill="#7d8590" xml:space="preserve"># Tuesday. A new Claude Code session. No chat history from Monday's Codex session.</text>
+<text x="24" y="78" fill="#e6edf3" font-weight="600" xml:space="preserve">$ claude</text>
+<text x="24" y="100" fill="#d2a8ff" xml:space="preserve">  SessionStart hook › hp brief</text>
+<text x="24" y="122" fill="#79c0ff" font-weight="600" xml:space="preserve">  # Project brief: Checkout Revamp</text>
+<text x="24" y="144" fill="#c9d1d9" xml:space="preserve">  Goal         Cut median checkout time from 62s to under 30s   (2/6 tasks done)</text>
+<text x="24" y="166" fill="#c9d1d9" xml:space="preserve">  In progress  single-payment-call · Collapse authorize and capture into one API call</text>
+<text x="24" y="188" fill="#f0883e" xml:space="preserve">  Blocked      provider-sandbox · waiting on finance to request keys</text>
+<text x="24" y="210" fill="#c9d1d9" xml:space="preserve">  Handoff      codex → claude-code: add an idempotency key so client retries</text>
+<text x="24" y="232" fill="#c9d1d9" xml:space="preserve">               never double-charge, then run the combined capture test</text>
+<text x="24" y="254" fill="#c9d1d9" xml:space="preserve">  Next         hp worklog create … before you stop</text>
+<text x="24" y="298" fill="#e6edf3" font-weight="600" xml:space="preserve">&gt; Pick up where the team left off.</text>
+<text x="24" y="342" fill="#7ee787" xml:space="preserve">● First I'm adding an idempotency key to POST /payments in api, which keeps the</text>
+<text x="24" y="364" fill="#7ee787" xml:space="preserve">  critical single-payment-call task moving. The handoff calls for it so client</text>
+<text x="24" y="386" fill="#7ee787" xml:space="preserve">  retries can never double-charge, and the combined-capture test has to wait for</text>
+<text x="24" y="408" fill="#7ee787" xml:space="preserve">  finance's sandbox keys anyway.</text>
+</g></svg>

@@ -13,7 +13,9 @@ go build -o ./bin/hp ./cmd/hp
 ## Commands
 
 ```bash
-hp project init --path ./my-project --name "My Project"
+hp project init --path ./my-project --name "My Project"   # own Git repo; --no-git to skip
+hp brief --project ./my-project
+hp hook install --project ./my-project
 hp project status --path ./my-project --format json
 hp project validate --path ./my-project --format json
 hp project serve --path ./my-project --open
@@ -90,7 +92,48 @@ selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
 the default action archives them under `archive/` and never selects durable
 project history.
 
+## Session start: `hp brief`
+
+`hp brief` is the first command of every session. It finds the project from the
+current directory or any directory inside it (including nested repository
+worktrees under `repos/`) and prints the current goal, state, next actions and
+risks, in-progress, ready, and blocked tasks, the current plan, and the
+remaining work from the latest work log and handoff.
+
+```bash
+hp brief                       # text in a terminal, JSON when piped
+hp brief --format text --full  # complete plan, work log, and handoff
+hp brief --project ./my-project --lines 15 --json
+```
+
+Long sections are bounded (`--lines`, default 30) so the brief stays readable.
+It warns when `state/project-state.json` is older than the latest work log.
+
+## Session hooks
+
+`hp project init` writes `.claude/settings.json` with two Claude Code hooks;
+`hp hook install` adds them to an existing project without touching other
+settings. Both hooks do nothing when `hp` is not installed or the session is
+outside a Harness Project, and never fail the session.
+
+| Hook | Command | Effect |
+| --- | --- | --- |
+| `SessionStart` | `hp hook session-start --harness claude-code` | Registers the session from the hook input, exports `HP_HARNESS` and `HP_SESSION_ID` to later shell commands through `CLAUDE_ENV_FILE`, and prints `hp brief` into the session context. |
+| `Stop` | `hp hook stop --harness claude-code` | If the project or any repository under `repos/` (or a registered repository path) changed since the session started and no work log or handoff was written, asks the agent once to record progress. |
+
+Codex reads `AGENTS.md` and runs `hp brief` itself. Its hooks file uses the same
+event names, so `hp hook session-start --harness codex` and `hp hook stop
+--harness codex` can be added to a Codex hooks configuration; that path has not
+been verified by the project yet.
+
 ## Agent session discovery
+
+`hp agent register` and `hp task inbox` detect the current session when
+`--harness` and `--session-id` are omitted: first `HP_HARNESS` and
+`HP_SESSION_ID` (exported by the session hook or set by hand), then Codex's
+`CODEX_THREAD_ID`. An explicit flag always wins, and a detected ID is never
+used for a different explicit harness. Never invent an ID; when nothing is
+detected the command fails and says how to provide one.
 
 At the start of work, an agent should register its actual provider session ID
 with `hp agent register`. `cc` is accepted as an alias for `claude-code`.

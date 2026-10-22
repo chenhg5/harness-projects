@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1",
+  "id": "provider-sandbox",
+  "goalId": "faster-checkout",
+  "title": "Get payment provider sandbox keys for combined capture",
+  "priority": "high",
+  "status": "blocked",
+  "blockedReason": "waiting on finance to request keys",
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}

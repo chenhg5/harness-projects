@@ -84,3 +84,14 @@ func TestBriefTruncatesLongPlans(t *testing.T) {
 		t.Fatalf("--full should keep the whole plan, len=%d", len(stdout))
 	}
 }
+
+func TestShippedExampleStaysValid(t *testing.T) {
+	example := filepath.Join("..", "..", "examples", "checkout-revamp")
+	if code, stdout, stderr := run(t, "project", "validate", "--path", example, "--json"); code != 0 {
+		t.Fatalf("example invalid: code=%d %s %s", code, stdout, stderr)
+	}
+	code, stdout, stderr := run(t, "brief", "--project", example, "--format", "text")
+	if code != 0 || !strings.Contains(stdout, "single-payment-call") || !strings.Contains(stdout, "Latest handoff") {
+		t.Fatalf("example brief: code=%d %s\n%s", code, stderr, stdout)
+	}
+}

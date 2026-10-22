@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "id": "flag-rollout",
+  "goalId": "faster-checkout",
+  "title": "Roll out behind the fast-checkout flag",
+  "priority": "medium",
+  "status": "pending",
+  "dependsOn": [
+    "web-one-page",
+    "single-payment-call"
+  ],
+  "createdAt": "2026-10-22T05:15:31Z",
+  "updatedAt": "2026-10-22T05:15:31Z"
+}
