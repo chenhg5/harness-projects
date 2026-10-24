@@ -1,6 +1,6 @@
 ---
 name: harness-projects
-description: Work in a portable Harness Project with shared goals, tasks, memory, work logs, handoffs, and cleanup across Claude Code, Cursor, Codex, and other coding harnesses.
+description: Work in a portable Harness Project using hp for shared goals, tasks, memory, work logs, handoffs, cleanup, and skill synchronization across Claude Code, Cursor, Codex, and Agent Skills-compatible harnesses.
 ---
 
 # Harness Projects
@@ -13,6 +13,11 @@ Use the Harness Project directory as the shared coordination context for a task 
 2. Read `AGENTS.md`, `PROJECT.md`, `state/current-plan.md`, the active goal, the relevant task, and the latest work log. Read the latest handoff when responsibility has moved between agents.
 3. Run `hp project validate --path <project>` before changing project files.
 4. Inspect only the repository worktrees under `repos/` that the task needs. The project Git tracks coordination state; nested repositories under `repos/` keep their own Git history.
+5. Register your actual provider session with `hp agent register`, then inspect
+   `hp task inbox --project <project> --harness <name> --session-id <actual-id>`.
+   Never invent a session ID. Registration records participation in
+   `agents/sessions/` and remains discoverable; it does not indicate whether
+   a provider process is currently running.
 
 ## Use the CLI
 
@@ -23,9 +28,19 @@ hp context search --project <project> --query "relevant terms"
 hp worklog latest --project <project> --format text
 hp handoff latest --project <project> --format text
 hp project validate --path <project>
+hp skill sync --project <project> --targets codex,claude,cursor,agents --dry-run
+hp coordinator dispatch --project <project> --task-id <task-id> \
+  --harness <name> --session-id <actual-id> --worktree <project-relative-path> \
+  --dry-run
 ```
 
 Use `hp file write` for project sections instead of writing through an arbitrary path. Use `--dry-run` before mutations when the change is broad or destructive.
+For direct delivery, omit `--dry-run` only after checking the exact target
+session and worktree. Preflight failure leaves the task in its session inbox.
+If a provider process started but its result is uncertain, inspect the run
+and local dispatch logs before an intentional `--retry`.
+`hp agent heartbeat` and `hp agent unregister` manage only a machine-local
+hint used for direct CLI delivery. They do not erase participation.
 
 ## Record progress
 
@@ -58,4 +73,4 @@ Never use cleanup to remove specifications, goals, tasks, runs, verification, or
 
 ## Harness adapters
 
-The canonical context lives in project files, not in one vendor's private memory. Claude Code reads `AGENTS.md`/`CLAUDE.md`, Codex can mount `skills/harness-projects/SKILL.md` through `.codex/skills`, and Cursor can use `.cursor/rules/`. When an adapter offers a private project memory feature, treat it as a cache or convenience and record durable decisions in `spec/`, `context/`, `worklogs/`, or `handoffs/`.
+The canonical context lives in project files, not in one vendor's private memory. Canonical skills live under `skills/`; preview and apply their harness mounts with `hp skill sync --dry-run` and `hp skill sync`. Claude Code reads `AGENTS.md`/`CLAUDE.md` and `.claude/skills/`, Codex reads `.codex/skills/`, Cursor can use `.cursor/rules/` and `.cursor/skills/`, and compatible agents can use `.agents/skills/`. When an adapter offers a private project memory feature, treat it as a cache or convenience and record durable decisions in `spec/`, `context/`, `worklogs/`, or `handoffs/`.

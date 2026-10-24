@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/chenhg5/harness-projects/internal/skillmount"
 )
 
 func TestInitAndInspect(t *testing.T) {
@@ -75,5 +77,37 @@ func TestInitPromptsAgentSessionRegistration(t *testing.T) {
 				t.Fatalf("%s does not instruct agents to run %q", path, command)
 			}
 		}
+	}
+}
+
+func TestInspectDetectsAndRecoversSkillMountDrift(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	plan, files, err := PlanInit(root, "Demo", false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyInit(plan, files); err != nil {
+		t.Fatal(err)
+	}
+	skillDirectory := filepath.Join(root, "skills", "shared", "extra")
+	if err := os.MkdirAll(skillDirectory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDirectory, "SKILL.md"), []byte("---\nname: extra\n---\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if status := Inspect(root); status.Valid {
+		t.Fatal("expected missing skill mounts to invalidate the project")
+	}
+	targets, _ := skillmount.ParseTargets("codex,claude")
+	mountPlan, err := skillmount.BuildPlan(root, targets, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := skillmount.Apply(mountPlan); err != nil {
+		t.Fatal(err)
+	}
+	if status := Inspect(root); !status.Valid {
+		t.Fatalf("expected synchronized project to be valid: %v", status.Problems)
 	}
 }

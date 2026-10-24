@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "v0.0.7"
+var Version = "v0.0.8"
 
 type app struct {
 	in  io.Reader
@@ -196,6 +196,8 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.hookStop(args[2:])
 	case "hook install":
 		return a.hookInstall(args[2:])
+	case "skill sync":
+		return a.skillSync(args[2:])
 	case "schema list":
 		return a.schemaList(args[2:])
 	case "schema get":

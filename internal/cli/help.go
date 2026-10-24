@@ -26,6 +26,7 @@ Commands:
   cleanup plan|apply              Archive stale transient files safely
   state get|update|validate       Inspect and update the project control snapshot
   hook install|session-start|stop  Harness lifecycle hooks: brief at start, progress reminder at stop
+  skill sync                    Synchronize canonical skills into harness discovery directories
   coordinator assign|get|clear|plan|dispatch Manage the Coordinator and dispatch
   wakeup configure|status|once|start Schedule and run Coordinator wakeups
   file write|read                 Write and read project files
@@ -50,6 +51,7 @@ var groupHelp = map[string]string{
 	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
 	"state":       "State commands: get, update, validate\nExample: hp state validate --project ./my-project\n",
 	"hook":        "Hook commands: install, session-start, stop\nExample: hp hook install --project ./my-project\n",
+	"skill":       "Skill commands: sync\nExample: hp skill sync --project ./my-project --targets claude,agents\n",
 	"coordinator": "Coordinator commands: assign, get, clear, plan, dispatch\nExample: hp coordinator assign --project ./my-project --registration-id <id>\n",
 	"wakeup":      "Wakeup commands: configure, status, once, start\nExample: hp wakeup configure --project ./my-project --every 30m --worktree repos/api --prompt-file agents/coordinator-wakeup.md\n",
 	"file":        "File commands: write, read\nExample: hp file read --project ./my-project --section spec --path architecture.md\n",
@@ -57,6 +59,11 @@ var groupHelp = map[string]string{
 }
 
 var commandHelp = map[string]string{
+	"skill sync": `hp skill sync [--project <directory>] [--targets codex,claude,cursor,agents|all] [--prune] [--dry-run] [--format json|text]
+  Discover canonical skills under skills/ and expose them through relative symlinks in each selected harness directory.
+  Existing non-symlink entries are never overwritten. --prune removes only stale symlinks that point into the project's skills/ directory.
+  Example: hp skill sync --project ./my-project --targets claude,agents --dry-run
+`,
 	"hook install": `hp hook install [--project <directory>] [--dry-run] [--format json|text]
   Add the hp SessionStart and Stop hooks to the project's .claude/settings.json, keeping other settings.
   New projects get them from hp project init.
@@ -290,6 +297,7 @@ type commandSchema struct {
 }
 
 var commandSchemas = map[string]commandSchema{
+	"skill sync":           {"skill sync", "Synchronize canonical project skills into harness discovery directories", []flagSchema{{"project", "string", false, nil}, {"targets", "string", false, nil}, {"prune", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp skill sync --project ./my-project --targets claude,agents --dry-run"}},
 	"hook install":         {"hook install", "Install Claude Code session hooks in a project", []flagSchema{{"project", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp hook install --project ./my-project"}},
 	"hook session-start":   {"hook session-start", "Session start hook: register the session and print the brief", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook session-start --harness claude-code"}},
 	"hook stop":            {"hook stop", "Stop hook: ask once for a work log after changes", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook stop --harness claude-code"}},
