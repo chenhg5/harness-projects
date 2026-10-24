@@ -16,6 +16,8 @@ go build -o ./bin/hp ./cmd/hp
 hp project init --path ./my-project --name "My Project"   # own Git repo; --no-git to skip
 hp brief --project ./my-project
 hp hook install --project ./my-project
+hp skill sync --project ./my-project --targets claude,agents --dry-run
+hp skill sync --project ./my-project --targets claude,agents
 hp project status --path ./my-project --format json
 hp project validate --path ./my-project --format json
 hp project serve --path ./my-project --open
@@ -125,6 +127,14 @@ Codex reads `AGENTS.md` and runs `hp brief` itself. Its hooks file uses the same
 event names, so `hp hook session-start --harness codex` and `hp hook stop
 --harness codex` can be added to a Codex hooks configuration; that path has not
 been verified by the project yet.
+
+## Skill mounts
+
+`hp skill sync` discovers canonical skills below `skills/` and creates relative
+links in the selected harness directories. The default target is `all`; use
+`--targets codex,claude,cursor,agents` to be explicit. It never overwrites a
+real file or directory. `--prune` removes only stale symlinks that still point
+into the project's canonical `skills/` tree.
 
 ## Agent session discovery
 

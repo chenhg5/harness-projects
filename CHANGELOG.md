@@ -2,8 +2,11 @@
 
 All notable changes to Harness Projects will be documented here.
 
-## Unreleased
+## v0.0.8 - 2026-10-25
 
+- Add `hp skill sync` to discover canonical project skills and maintain
+  relative mounts for Codex, Claude Code, Cursor, and `.agents/skills`, with
+  dry-run, collision protection, and opt-in pruning.
 - Add `hp brief`: a 30-second orientation for any new session (goal, state,
   next actions, task readiness, plan, and the remaining work from the latest
   work log and handoff). It finds the project from any nested directory.

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/chenhg5/harness-projects/internal/hooks"
+	"github.com/chenhg5/harness-projects/internal/skillmount"
 )
 
 const SchemaVersion = "1"
@@ -129,13 +130,16 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 	for _, relative := range fileOrder {
 		result.Changes = append(result.Changes, Action{Operation: "create_file", Path: filepath.Join(root, relative)})
 	}
-	for _, link := range []string{".codex/skills/project-context", ".claude/skills/project-context"} {
-		linkPath := filepath.Join(root, link)
-		target, err := filepath.Rel(filepath.Dir(linkPath), filepath.Join(root, "skills/shared/project-context"))
-		if err != nil {
-			return InitResult{}, nil, err
-		}
-		result.Changes = append(result.Changes, Action{Operation: "create_symlink", Path: linkPath, Target: target})
+	mountPlan, err := skillmount.BuildPlanForSkills(root, []skillmount.Skill{{
+		Name:   "project-context",
+		Source: filepath.Join(root, "skills/shared/project-context"),
+		Scope:  "shared",
+	}}, []string{"codex", "claude"}, false)
+	if err != nil {
+		return InitResult{}, nil, err
+	}
+	for _, change := range mountPlan.Changes {
+		result.Changes = append(result.Changes, Action{Operation: change.Operation, Path: change.Path, Target: change.Target})
 	}
 	return result, files, nil
 }
@@ -243,17 +247,22 @@ func Inspect(path string) Status {
 			status.Problems = append(status.Problems, "missing file: "+relative)
 		}
 	}
-	for _, link := range []string{".codex/skills/project-context", ".claude/skills/project-context"} {
-		linkPath := filepath.Join(root, link)
-		info, err := os.Lstat(linkPath)
-		if err != nil || info.Mode()&os.ModeSymlink == 0 {
-			status.Problems = append(status.Problems, "missing skill symlink: "+link)
-			continue
-		}
-		target, err := filepath.EvalSymlinks(linkPath)
-		canonicalTarget, targetErr := filepath.EvalSymlinks(filepath.Join(root, "skills/shared/project-context"))
-		if targetErr != nil || err != nil || target != canonicalTarget {
-			status.Problems = append(status.Problems, "invalid skill symlink: "+link)
+	targets, _ := skillmount.ParseTargets("codex,claude")
+	mountPlan, mountErr := skillmount.BuildPlan(root, targets, false)
+	if mountErr != nil {
+		status.Problems = append(status.Problems, "invalid skill mounts: "+mountErr.Error())
+	} else {
+		for _, change := range mountPlan.Changes {
+			relative, err := filepath.Rel(root, change.Path)
+			if err != nil {
+				relative = change.Path
+			}
+			switch change.Operation {
+			case "create_symlink":
+				status.Problems = append(status.Problems, "missing skill symlink: "+relative)
+			case "replace_symlink":
+				status.Problems = append(status.Problems, "invalid skill symlink: "+relative)
+			}
 		}
 	}
 	status.Valid = len(status.Problems) == 0
