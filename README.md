@@ -46,11 +46,11 @@ That is all. `hp project init` creates the project as its own Git repository, wi
 | --- | --- |
 | A session starts | The agent receives `hp brief`: goal, next actions, in-progress, ready and blocked tasks, the plan, and what the last session left unfinished. The session registers itself; no IDs to copy. |
 | The agent works | It updates tasks with `hp task update` and records decisions in `spec/`. |
-| The session stops | If it changed files without leaving a note, it is asked once to write `hp worklog create` (or `hp handoff create` for someone else). |
+| The session stops | It runs `hp finish`, which updates the task, writes the work log, and reconciles state together. The stop hook reminds it once if it forgets. |
 
 Tell the agent what you want in plain words ("set the goal: cut checkout time in half, then plan the tasks"); the generated `AGENTS.md` and project skill teach it the commands.
 
-**Codex and Cursor** read the generated `AGENTS.md` and Cursor rule, which start every session with `hp brief`. Codex sessions are detected automatically through `CODEX_THREAD_ID`. **An existing project** gets the Claude Code hooks with `hp hook install`. Other install options are in [INSTALL.md](INSTALL.md).
+**Codex and Cursor** read the generated `AGENTS.md` and Cursor rule, which start every session with `hp brief`. Codex sessions are detected automatically through `CODEX_THREAD_ID`. After updating `hp`, run `hp project upgrade --path .` in an existing project to refresh managed instructions, hooks, and all supported skill mounts without replacing project-specific instructions. Other install options are in [INSTALL.md](INSTALL.md).
 
 ## Try the example
 
@@ -81,6 +81,7 @@ my-project/              # its own Git repository: the shared memory
 - **One brief, any harness.** `hp brief` works from anywhere inside the project, including nested repository worktrees, and gives the same picture to Claude Code, Codex, Cursor, or a person.
 - **Many repositories, one plan.** A feature that touches `web` and `api` has one goal and one task graph; each repository keeps its own branches.
 - **Agent-friendly CLI.** Every `hp` command has JSON output, dry runs, and stable exit codes, so agents drive it without guessing.
+- **Drift is visible.** `hp project doctor` checks whether state, tasks, evidence, work logs, skills, repositories, and worktrees still agree.
 
 Open a read-only dashboard with `hp project serve --path . --open`.
 

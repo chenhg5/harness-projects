@@ -46,11 +46,11 @@ cd my-project && claude
 | --- | --- |
 | 会话开始 | Agent 收到 `hp brief`：目标、下一步、进行中/可开始/被阻塞的任务、当前计划，以及上个会话没做完的事。会话自动登记，不需要手动复制 ID。 |
 | Agent 工作 | 用 `hp task update` 更新任务，把决定写进 `spec/`。 |
-| 会话结束 | 如果改了文件却没留记录，会被提醒一次写 `hp worklog create`（交给别人时写 `hp handoff create`）。 |
+| 会话结束 | 运行 `hp finish`，一次更新任务、写工作日志并对齐状态；如果忘了，stop hook 会提醒一次。 |
 
 直接用自然语言告诉 Agent 你要什么（“目标是把结账时间减半，先拆任务”），生成的 `AGENTS.md` 和项目 skill 会教它用哪些命令。
 
-**Codex 和 Cursor** 会读取生成的 `AGENTS.md` 和 Cursor 规则，每个会话先运行 `hp brief`；Codex 会话通过 `CODEX_THREAD_ID` 自动识别。**已有项目**可以用 `hp hook install` 补上 Claude Code hooks。其他安装方式见 [INSTALL.md](INSTALL.md)。
+**Codex 和 Cursor** 会读取生成的 `AGENTS.md` 和 Cursor 规则，每个会话先运行 `hp brief`；Codex 会话通过 `CODEX_THREAD_ID` 自动识别。升级 `hp` 后，在已有项目中运行 `hp project upgrade --path .`，即可刷新托管说明、hooks 和所有支持的 skill 挂载，同时保留项目自己的说明。其他安装方式见 [INSTALL.md](INSTALL.md)。
 
 ## 试试示例项目
 
@@ -81,6 +81,7 @@ my-project/              # 独立的 Git 仓库：共享的项目记忆
 - **一份 brief，任意 Harness。** 在项目里任何位置（包括嵌套的仓库 worktree）运行 `hp brief`，Claude Code、Codex、Cursor 和人看到的都是同一份信息。
 - **多个仓库，一个计划。** 同时涉及 `web` 和 `api` 的需求只有一个目标、一张任务图；各仓库保留自己的分支。
 - **对 Agent 友好的 CLI。** 每个 `hp` 命令都有 JSON 输出、dry run 和稳定的退出码，Agent 不需要猜。
+- **偏移可见。** `hp project doctor` 会检查状态、任务、证据、工作日志、skill、仓库和 worktree 是否仍然一致。
 
 用 `hp project serve --path . --open` 打开只读看板。
 

@@ -113,7 +113,7 @@ func TestStopHookAsksOnceAfterChanges(t *testing.T) {
 	}
 	code, stdout, _ := runInput(t, stop, "hook", "stop", "--harness", "claude-code")
 	var decision map[string]string
-	if code != 0 || json.Unmarshal([]byte(stdout), &decision) != nil || decision["decision"] != "block" || !strings.Contains(decision["reason"], "hp worklog create") {
+	if code != 0 || json.Unmarshal([]byte(stdout), &decision) != nil || decision["decision"] != "block" || !strings.Contains(decision["reason"], "hp finish") {
 		t.Fatalf("changes without a work log should block once: code=%d %s", code, stdout)
 	}
 	if code, stdout, _ := runInput(t, stop, "hook", "stop", "--harness", "claude-code"); code != 0 || stdout != "" {

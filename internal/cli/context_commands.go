@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/chenhg5/harness-projects/internal/fileops"
@@ -9,6 +10,14 @@ import (
 	"github.com/chenhg5/harness-projects/internal/model"
 	"github.com/chenhg5/harness-projects/internal/store"
 )
+
+type contextMatch struct {
+	Type    string        `json:"type"`
+	Memory  *model.Memory `json:"memory,omitempty"`
+	Path    string        `json:"path,omitempty"`
+	Score   int           `json:"score"`
+	Excerpt string        `json:"excerpt"`
+}
 
 func (a app) contextAdd(args []string) int {
 	fs := newFlags("context add")
@@ -128,7 +137,24 @@ func (a app) contextSearch(args []string) int {
 	if err != nil {
 		return a.operationError(err, *kind)
 	}
-	matches := hpmemory.Search(items, *query)
+	matches := []contextMatch{}
+	for _, match := range hpmemory.Search(items, *query) {
+		memory := match.Memory
+		matches = append(matches, contextMatch{Type: "memory", Memory: &memory, Score: match.Score, Excerpt: match.Excerpt})
+	}
+	fileMatches, err := hpmemory.SearchFiles(s.Root, *query)
+	if err != nil {
+		return a.operationError(err, *projectPath)
+	}
+	for _, match := range fileMatches {
+		matches = append(matches, contextMatch{Type: "file", Path: match.Path, Score: match.Score, Excerpt: match.Excerpt})
+	}
+	sort.SliceStable(matches, func(i, j int) bool {
+		if matches[i].Score != matches[j].Score {
+			return matches[i].Score > matches[j].Score
+		}
+		return matches[i].Path < matches[j].Path
+	})
 	a.emit(matches, fmt.Sprintf("%d match(es)", len(matches)), selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }

@@ -24,7 +24,7 @@ func TestSkillSync(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Action != "skill.sync" || len(result.Changes) != 1 {
+	if result.Action != "skill.sync" || len(result.Changes) != 0 {
 		t.Fatalf("unexpected result: %s", stdout)
 	}
 	target, err := os.Readlink(filepath.Join(root, ".agents/skills/project-context"))
@@ -41,6 +41,9 @@ func TestSkillSyncDryRunDoesNotWrite(t *testing.T) {
 	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
 		t.Fatalf("init code=%d stderr=%s", code, stderr)
 	}
+	if err := os.RemoveAll(filepath.Join(root, ".agents")); err != nil {
+		t.Fatal(err)
+	}
 	code, _, stderr := run(t, "skill", "sync", "--project", root, "--targets", "agents", "--dry-run")
 	if code != 10 || stderr != "" {
 		t.Fatalf("dry run code=%d stderr=%s", code, stderr)
@@ -56,6 +59,9 @@ func TestSkillSyncReportsConflict(t *testing.T) {
 		t.Fatalf("init code=%d stderr=%s", code, stderr)
 	}
 	path := filepath.Join(root, ".agents/skills/project-context")
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.MkdirAll(path, 0755); err != nil {
 		t.Fatal(err)
 	}

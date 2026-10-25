@@ -112,7 +112,7 @@ func (a app) hookSessionStart(args []string) int {
 	if registered != "" {
 		fmt.Fprintf(a.out, "\nThis session is registered as `%s`; `hp` commands detect it automatically.\n", registered)
 	}
-	fmt.Fprintln(a.out, "Before you stop after meaningful work, record it with `hp worklog create` (or `hp handoff create` when someone else continues).")
+	fmt.Fprintln(a.out, "Before you stop after meaningful work, close it with `hp finish` (or `hp handoff create` when someone else continues).")
 	return 0
 }
 
@@ -164,8 +164,8 @@ func (a app) hookStop(args []string) int {
 		}
 	}
 	reason := fmt.Sprintf("This session changed files (%s) but has not recorded progress in the Harness Project at %s. "+
-		"Run `hp worklog create --project %s --id <slug> --agent %s --objective ... --completed ... --remaining ... --next ...` "+
-		"(and `hp task update` for task status), then stop. If the work is trivial, reply briefly and stop; you will not be asked again this session.",
+		"Run `hp finish --project %s --task-id <task> --id <slug> --agent %s --objective ... --completed ... --remaining ... --next ...` "+
+		"to update the task, work log, and state together (or create a handoff when responsibility moves), then stop. If the work is trivial, reply briefly and stop; you will not be asked again this session.",
 		strings.Join(changed, ", "), root, root, harness)
 	_ = json.NewEncoder(a.out).Encode(map[string]string{"decision": "block", "reason": reason})
 	return 0

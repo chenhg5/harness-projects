@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "v0.0.8"
+var Version = "v0.0.9"
 
 type app struct {
 	in  io.Reader
@@ -51,6 +51,13 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		}
 		return a.brief(args[1:])
 	}
+	if args[0] == "finish" {
+		if hasHelp(args[1:]) {
+			fmt.Fprint(out, commandHelp["finish"])
+			return 0
+		}
+		return a.finish(args[1:])
+	}
 	if len(args) < 2 {
 		if help, ok := groupHelp[args[0]]; ok {
 			fmt.Fprint(out, help)
@@ -78,6 +85,10 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.projectStatus(args[2:], false)
 	case "project validate":
 		return a.projectStatus(args[2:], true)
+	case "project doctor":
+		return a.projectDoctor(args[2:])
+	case "project upgrade":
+		return a.projectUpgrade(args[2:])
 	case "project serve":
 		return a.projectServe(args[2:])
 	case "file write":
@@ -172,6 +183,8 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.stateGet(args[2:], true)
 	case "state update":
 		return a.stateUpdate(args[2:])
+	case "state reconcile":
+		return a.stateReconcile(args[2:])
 	case "coordinator plan":
 		return a.coordinatorPlan(args[2:])
 	case "coordinator assign":

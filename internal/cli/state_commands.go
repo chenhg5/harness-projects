@@ -2,9 +2,13 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/chenhg5/harness-projects/internal/model"
+	"github.com/chenhg5/harness-projects/internal/project"
+	"github.com/chenhg5/harness-projects/internal/projectstate"
 	"github.com/chenhg5/harness-projects/internal/store"
+	"github.com/chenhg5/harness-projects/internal/worklog"
 )
 
 func (a app) stateGet(args []string, validate bool) int {
@@ -127,5 +131,49 @@ func (a app) stateUpdate(args []string) int {
 		return a.operationError(err, *projectPath)
 	}
 	a.emit(result, "Project state updated", selectedFormat(*format, *jsonFlag, a.out))
+	return 0
+}
+
+func (a app) stateReconcile(args []string) int {
+	fs := newFlags("state reconcile")
+	projectPath := fs.String("project", ".", "project directory or any directory inside it")
+	format, jsonFlag := outputFlags(fs)
+	dryRun := fs.Bool("dry-run", false, "preview without writing")
+	if err := parse(fs, args); err != nil {
+		return a.parseError(err)
+	}
+	root, err := project.Find(*projectPath)
+	if err != nil {
+		return a.operationError(err, *projectPath)
+	}
+	s, err := store.Open(root)
+	if err != nil {
+		return a.operationError(err, root)
+	}
+	state, err := s.State()
+	if err != nil {
+		return a.operationError(err, root)
+	}
+	tasks, err := s.Tasks()
+	if err != nil {
+		return a.operationError(err, root)
+	}
+	latestRef := ""
+	if names, listErr := worklog.List(root); listErr == nil && len(names) > 0 {
+		latestRef = filepath.ToSlash(filepath.Join("worklogs", names[len(names)-1]))
+	}
+	state = projectstate.Reconcile(state, tasks, timestamp(), "", latestRef, "", false)
+	if err := model.ValidateProjectState(state); err != nil {
+		return a.operationError(err, root)
+	}
+	result := map[string]any{"action": "state.reconcile", "state": state}
+	if *dryRun {
+		a.emit(result, "Would reconcile project state from task records", "json")
+		return 10
+	}
+	if err := s.SaveState(state); err != nil {
+		return a.operationError(err, root)
+	}
+	a.emit(result, "Reconciled project state from task records", selectedFormat(*format, *jsonFlag, a.out))
 	return 0
 }
