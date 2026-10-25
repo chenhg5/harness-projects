@@ -220,7 +220,7 @@ func TestFinishDryRunIsExplicitAndDoesNotWrite(t *testing.T) {
 	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "api", "--title", "Build API", "--status", "in_progress"); code != 0 {
 		t.Fatalf("task create code=%d stderr=%s", code, stderr)
 	}
-	code, stdout, stderr := run(t, "finish", "--project", root, "--task-id", "api", "--id", "api-session", "--objective", "Build API", "--completed", "Drafted routes", "--remaining", "Tests", "--next", "Run tests", "--dry-run")
+	code, stdout, stderr := run(t, "finish", "--project", root, "--task-id", "api", "--id", "api-session", "--agent", "codex", "--objective", "Build API", "--completed", "Drafted routes", "--remaining", "Tests", "--next", "Run tests", "--dry-run")
 	if code != 10 || stderr != "" {
 		t.Fatalf("finish dry-run code=%d stderr=%s", code, stderr)
 	}
