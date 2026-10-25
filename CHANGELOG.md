@@ -2,6 +2,30 @@
 
 All notable changes to Harness Projects will be documented here.
 
+## Unreleased
+
+## v0.0.9 - 2026-10-25
+
+- Add `hp finish` to update a task, append its work log, and reconcile
+  task-backed project state in one closeout operation.
+- Add `hp state reconcile` to repair existing task/state drift while preserving
+  human judgments such as phase, health, risks, and next actions.
+- Add `hp project doctor` to detect stale state, task/state disagreement,
+  invalid source references, malformed work logs, skill mount drift, and
+  repository/worktree drift.
+- Add `hp project upgrade` to refresh managed workflow instructions, Claude
+  hooks, and skill mounts for existing projects without replacing custom
+  project instructions.
+- Search ordinary Markdown and text notes under `context/` alongside
+  structured memories.
+- Mount shared project skills for Codex, Claude Code, Cursor, and Agent
+  Skills-compatible harnesses by default in new projects.
+- Make copied-project session registration rebind to the current project
+  directory instead of silently reusing an old external delivery worktree.
+- Clarify generated lifecycle guidance for partial `hp finish` closeouts,
+  handoffs, in-progress tasks, context-search terms, unregister IDs, and
+  user-authorized Git operations; mark finish dry-run output explicitly.
+
 ## v0.0.8 - 2026-10-25
 
 - Add `hp skill sync` to discover canonical project skills and maintain

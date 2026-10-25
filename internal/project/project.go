@@ -47,7 +47,12 @@ var directories = []string{
 	"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events",
 	"verification", "worklogs", "archive", "skills/shared/project-context", "scripts/shared", "repos",
 	"state", "artifacts", "integrations", ".harness-project", ".codex/skills",
-	".claude/skills", ".cursor/rules",
+	".claude/skills", ".cursor/rules", ".cursor/skills", ".agents/skills",
+}
+
+var optionalDirectories = map[string]bool{
+	".cursor/skills": true,
+	".agents/skills": true,
 }
 
 func ResolvePath(path string) (string, error) {
@@ -90,7 +95,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 	}
 	files := map[string][]byte{
 		"PROJECT.md":                             []byte("# " + name + "\n\nDescribe the project goal, scope, constraints, and participating repositories here.\n\n## Current work\n\nRead `state/current-plan.md`, the active goal in `goals/`, the latest work log in `worklogs/`, and the latest handoff in `handoffs/`.\n"),
-		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project: the shared memory for every coding agent working on it. Chat history is not shared between sessions or tools, so these files are the source of truth.\n\n## Start of every session\n\nRun `hp brief` and read it. It shows the goal, plan, next actions, ready tasks, and what the last session left unfinished. Then read the files it points to before changing code. Code repositories live in `repos/` and keep their own Git history.\n\n## While working\n\n- Pick a ready task and mark it with `hp task update --project . --id <task> --status in_progress`.\n- Record durable decisions in `spec/` and research in `context/`.\n- Register this session with `hp agent register --project . --focus <what you are doing>`. The session ID is detected from the session hook (`HP_SESSION_ID`) or Codex (`CODEX_THREAD_ID`); never invent one. Pass `--harness` and `--session-id` only when detection fails.\n\n## Before you stop\n\n- `hp worklog create --project . --id <slug> --agent <you> --objective ... --completed ... --remaining ... --next ...`\n- `hp task update` for task status, and `hp state update --next-actions ...` when the plan changed.\n- `hp handoff create` when another agent or person continues the work.\n- Commit the project files.\n\n## Advanced: coordination\n\nUse `hp agent discover --project .` to find other agents and `hp task inbox --project .` for work assigned to this session. A Coordinator can use `hp coordinator dispatch --project . --task-id <id> --harness <name> --session-id <id> --worktree <path>` for explicit CLI delivery; preflight failure leaves the assignment in the inbox. Inspect an uncertain run before any `--retry`. Participation remains registered; `hp agent heartbeat` refreshes the local delivery hint and `hp agent unregister` ends it. Use `hp cleanup plan` to keep transient files bounded.\n"),
+		"AGENTS.md":                              []byte("# Agent instructions\n\nThis directory is a Harness Project: the shared memory for every coding agent working on it. Chat history is not shared between sessions or tools, so these files are the source of truth.\n\n## Start of every session\n\nRun `hp brief` and read it. It shows the goal, plan, in-progress and ready tasks, and what the last session left unfinished. Then read the files it points to before changing code. Run `hp project doctor --path .` when the brief reports drift. Code repositories live in `repos/` and keep their own Git history.\n\n## While working\n\n- Continue the relevant in-progress task shown by `hp brief`, or use `hp task ready --project .` to find unstarted work. Mark a chosen task with `hp task update --project . --id <task> --status in_progress`.\n- Record durable decisions in `spec/` and research in `context/`; `hp context search` searches structured memories and ordinary notes. Every whitespace-separated query term must match, so retry with fewer or more specific terms when needed.\n- Register this session with `hp agent register --project . --focus <what you are doing>`. The session ID is detected from `HP_SESSION_ID` or Codex `CODEX_THREAD_ID`; never invent one. Pass the real `--harness` and `--session-id` when detection fails, and pass `--worktree` when working outside the project directory. Keep the returned registration ID for `hp agent unregister --project . --id <registration-id>`.\n\n## Before you stop\n\n- Use `hp finish --project . --task-id <task> --id <slug> --objective ... --completed ... --remaining ... --next ...` after meaningful work. Use `--status in_progress` for a partial iteration; it still writes the work log and reconciles task-backed state.\n- Create `hp handoff create` only when responsibility moves to another agent or person. A handoff supplements `hp finish`; it does not replace it.\n- `hp finish` reconciles task-backed state only. Update goal status, project phase, health, and project-level next actions separately when they changed.\n- Run `hp project doctor --path .`. Do not create commits, branches, pushes, or pull requests unless the user or repository workflow explicitly requests them.\n\n## Advanced: coordination\n\nUse `hp agent discover --project .` to find other agents and `hp task inbox --project .` for work assigned to this session. A Coordinator can use `hp coordinator dispatch --project . --task-id <id> --harness <name> --session-id <id> --worktree <path>` for explicit CLI delivery; preflight failure leaves the assignment in the inbox. Inspect an uncertain run before any `--retry`. Participation remains registered; `hp agent heartbeat` refreshes the local delivery hint and `hp agent unregister --project . --id <registration-id>` ends it. Use `hp cleanup plan` to keep transient files bounded.\n"),
 		"CLAUDE.md":                              []byte("# Claude Code project instructions\n\nFollow `AGENTS.md` and read `PROJECT.md` for the shared project context. The canonical project files are outside `.claude/`.\n"),
 		"spec/README.md":                         []byte("# Project specifications\n\nKeep the current requirements, architecture, interfaces, and decisions here. Use separate files for separate concerns.\n"),
 		"goals/README.md":                        []byte("# Goals\n\nRecord long-lived project outcomes, constraints, and acceptance criteria here. A goal may span many tasks and runs.\n\nUse Markdown for the explanation: problem, outcome, scope, doneWhen conditions, and evidence required. YAML frontmatter MAY carry stable metadata such as id, status, owner, and method. A matching JSON file is a machine-readable index for filtering and joins; OKR, milestones, experiments, and metrics are optional methods.\n"),
@@ -104,7 +109,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"verification/README.md":                 []byte("# Verification\n\nRecord acceptance checks, test runs, review results, and evidence for project outputs here.\n"),
 		"worklogs/README.md":                     []byte("# Work logs\n\nAdd one dated Markdown file after each meaningful agent work session. Record the objective, completed work, remaining work, verification, and next action. Work logs are chronological activity records; use `handoffs/` when responsibility moves between agents or harnesses.\n"),
 		"archive/README.md":                      []byte("# Archive\n\n`hp cleanup` moves stale transient files here before removal from active project folders. Keep archived material only when it may help audit or recovery; do not archive goals, specifications, task records, or handoffs automatically.\n"),
-		"skills/shared/project-context/SKILL.md": []byte("---\nname: project-context\ndescription: Read the portable context of a Harness Project at the start of a session and record progress before stopping. Use when working in a directory that contains .harness-project/.\n---\n\n# Project context\n\n1. Run `hp brief` (from anywhere inside the project) and read it: goal, plan, next actions, ready tasks, and the remaining work from the latest work log and handoff.\n2. Read the files the brief points to, relevant `spec/` files, and each repository in `repos/` you will edit.\n3. Register the session with `hp agent register --project . --focus <responsibility>`; the session ID is detected from `HP_SESSION_ID` (session hook) or `CODEX_THREAD_ID`. Do not invent an ID.\n4. Check task readiness and dependencies with `hp task ready --project .`, then mark your task `in_progress`.\n5. Before stopping, write a work log with objective, completed work, remaining work, verification, and next action; update task status and `hp state update --next-actions` when the plan changed. Write a handoff when transferring responsibility.\n6. Advanced: find peers with `hp agent discover`, assigned work with `hp task inbox --project .`, and use `hp coordinator dispatch` for explicit CLI delivery. Inspect an uncertain run before any `--retry`.\n"),
+		"skills/shared/project-context/SKILL.md": []byte("---\nname: project-context\ndescription: Read, maintain, diagnose, and safely close work in a portable Harness Project. Use when working in a directory that contains .harness-project/.\n---\n\n# Project context\n\n1. Run `hp brief` (from anywhere inside the project) and read it: goal, plan, next actions, in-progress and ready tasks, and the remaining work from the latest work log and handoff.\n2. Read the files the brief points to, relevant `spec/` files, and each repository in `repos/` you will edit.\n3. Register the session with `hp agent register --project . --focus <responsibility>`; the session ID is detected from `HP_SESSION_ID` or `CODEX_THREAD_ID`. Do not invent an ID. Pass `--worktree` when working outside the project and keep the returned registration ID for `hp agent unregister --id <registration-id>`.\n4. Continue the relevant in-progress task from `hp brief`, or use `hp task ready --project .` for unstarted work. Mark it with `hp task update --project . --id <task> --status in_progress`.\n5. Use focused `hp context search` queries; every whitespace-separated term must match, so retry with fewer terms if needed.\n6. Before stopping, use `hp finish`; use `--status in_progress` for partial work. A handoff is additional and only applies when responsibility moves.\n7. Run `hp project doctor --path .`. Do not commit, branch, push, or open a pull request unless explicitly requested.\n8. Advanced: find peers with `hp agent discover`, assigned work with `hp task inbox --project .`, and use `hp coordinator dispatch` for explicit CLI delivery. Inspect an uncertain run before any `--retry`.\n"),
 		"scripts/shared/README.md":               []byte("# Shared scripts\n\nPut project-wide scripts here. Keep repository-specific scripts in their repositories.\n"),
 		"repos/README.md":                        []byte("# Repositories\n\nPlace linked repository worktrees here. Record their purpose and branch in `PROJECT.md`.\n"),
 		"state/status.md":                        []byte("# Status\n\nProject created.\n"),
@@ -113,8 +118,19 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"artifacts/README.md":                    []byte("# Artifacts\n\nStore generated project outputs that are not part of a source repository here.\n"),
 		"integrations/README.md":                 []byte("# Integrations\n\nRecord provider, repository, event, and runner adapter configuration here.\n"),
 		".harness-project/project.json":          append(manifest, '\n'),
-		".cursor/rules/harness-project.mdc":      []byte("---\ndescription: Shared Harness Project context\nalwaysApply: true\n---\n\nRun `hp brief` at the start of work and read `AGENTS.md` and `PROJECT.md`. Use `state/current-plan.md`, `spec/`, and `handoffs/` for portable project context, and record progress with `hp worklog create` before stopping.\n"),
-		".gitignore":                             []byte("# Source checkouts and generated worktrees keep their own Git history.\n/repos/*\n!/repos/README.md\n/.harness-project/worktrees/\n\n# Machine-local and generated material.\n/archive/*\n!/archive/README.md\n/artifacts/*\n!/artifacts/README.md\n/context/imports/\n*.log\n.DS_Store\n"),
+		".cursor/rules/harness-project.mdc":      []byte("---\ndescription: Shared Harness Project context\nalwaysApply: true\n---\n\nRun `hp brief` at the start of work and read `AGENTS.md` and `PROJECT.md`. Use `state/current-plan.md`, `spec/`, and `context/` for portable project context. Close meaningful work with `hp finish`; add a handoff only when responsibility moves. Do not commit or push unless explicitly requested.\n"),
+		".gitignore":                             []byte("# Source checkouts and generated worktrees keep their own Git history.\n/repos/*\n!/repos/README.md\n\n# Machine-local and generated material.\n/archive/*\n!/archive/README.md\n/artifacts/*\n!/artifacts/README.md\n/context/imports/\n*.log\n.DS_Store\n"),
+	}
+	for relative, body := range map[string]string{
+		"AGENTS.md":                              managedWorkflowInstructions(),
+		"skills/shared/project-context/SKILL.md": managedSkillInstructions(),
+		"context/README.md":                      managedContextInstructions(),
+		".cursor/rules/harness-project.mdc":      managedCursorInstructions(),
+	} {
+		files[relative], err = upsertManagedBlock(files[relative], body)
+		if err != nil {
+			return InitResult{}, nil, err
+		}
 	}
 	settings, _, err := hooks.MergeClaudeSettings(nil)
 	if err != nil {
@@ -122,7 +138,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 	}
 	files[".claude/settings.json"] = settings
 	files["AGENTS.md"] = append(files["AGENTS.md"], []byte("\nThe current Coordinator is an explicit project role, not a capability label or an online status. Check `hp coordinator get --project .` before acting as Coordinator. Assign a registered session with `hp coordinator assign --project . --registration-id <id>`; use `--replace` for a handoff. If `hp wakeup status --project .` shows an enabled schedule, the foreground `hp wakeup start --project .` process delivers the routine in `agents/coordinator-wakeup.md` to the current session. Inspect uncertain delivery logs before any manual `hp wakeup once --retry`.\n")...)
-	files["skills/shared/project-context/SKILL.md"] = append(files["skills/shared/project-context/SKILL.md"], []byte("\n7. Check `hp coordinator get --project .` for the current Coordinator. A Coordinator may configure `hp wakeup` with an interval or cron schedule and run the foreground scheduler; the role is explicit and transferable. Inspect `hp wakeup status` and delivery logs before retrying an uncertain wakeup.\n")...)
+	files["skills/shared/project-context/SKILL.md"] = append(files["skills/shared/project-context/SKILL.md"], []byte("\n8. Check `hp coordinator get --project .` for the current Coordinator. A Coordinator may configure `hp wakeup` with an interval or cron schedule and run the foreground scheduler; the role is explicit and transferable. Inspect `hp wakeup status` and delivery logs before retrying an uncertain wakeup.\n")...)
 	result.Changes = append(result.Changes, Action{Operation: "create_directory", Path: root})
 	for _, dir := range directories {
 		result.Changes = append(result.Changes, Action{Operation: "create_directory", Path: filepath.Join(root, dir)})
@@ -134,7 +150,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		Name:   "project-context",
 		Source: filepath.Join(root, "skills/shared/project-context"),
 		Scope:  "shared",
-	}}, []string{"codex", "claude"}, false)
+	}}, []string{"codex", "claude", "cursor", "agents"}, false)
 	if err != nil {
 		return InitResult{}, nil, err
 	}
@@ -234,6 +250,9 @@ func Inspect(path string) Status {
 	}
 	for _, dir := range directories {
 		info, err := os.Stat(filepath.Join(root, dir))
+		if errors.Is(err, os.ErrNotExist) && optionalDirectories[dir] {
+			continue
+		}
 		if err != nil || !info.IsDir() {
 			status.Problems = append(status.Problems, "missing directory: "+dir)
 		}

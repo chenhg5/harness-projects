@@ -6,6 +6,7 @@ const rootHelp = `Harness Projects CLI (hp)
 
 Start here:
   hp brief                        Catch up on the project: goal, plan, tasks, latest work log and handoff
+  hp finish                       Close a session without task/worklog/state drift
 
 Examples:
   hp project init --path ./my-project --name "My Project"
@@ -13,7 +14,7 @@ Examples:
   hp file write --project ./my-project --section spec --path architecture.md --from ./draft.md --dry-run
 
 Commands:
-  project init|status|validate|serve Create, inspect, and view Harness Projects
+  project init|status|validate|doctor|upgrade|serve Create, inspect, repair, and view Harness Projects
   goal create|list|get|update     Manage long-lived project goals
   task create|list|get|update|ready|assign|unassign|inbox Manage dependent work items
   run create|list|get|update      Manage execution attempts
@@ -24,7 +25,7 @@ Commands:
   handoff create|list|latest      Transfer work between agents
   worklog create|list|latest      Record and read agent work sessions
   cleanup plan|apply              Archive stale transient files safely
-  state get|update|validate       Inspect and update the project control snapshot
+	state get|update|validate|reconcile Inspect, update, and derive the project control snapshot
   hook install|session-start|stop  Harness lifecycle hooks: brief at start, progress reminder at stop
   skill sync                    Synchronize canonical skills into harness discovery directories
   coordinator assign|get|clear|plan|dispatch Manage the Coordinator and dispatch
@@ -38,7 +39,7 @@ Exit codes: 0 success, 1 operation/validation error, 2 usage, 3 not found,
 `
 
 var groupHelp = map[string]string{
-	"project":     "Project commands: init, status, validate, serve\nExample: hp project serve --path ./my-project --open\n",
+	"project":     "Project commands: init, status, validate, doctor, upgrade, serve\nExample: hp project doctor --path ./my-project\n",
 	"goal":        "Goal commands: create, list, get, update\nExample: hp goal list --project ./my-project\n",
 	"task":        "Task commands: create, list, get, update, ready, assign, unassign, inbox\nExample: hp task inbox --project ./my-project --harness codex --session-id <id>\n",
 	"run":         "Run commands: create, list, get, update\nExample: hp run list --project ./my-project\n",
@@ -49,7 +50,7 @@ var groupHelp = map[string]string{
 	"handoff":     "Handoff commands: create, list, latest\nExample: hp handoff latest --project ./my-project\n",
 	"worklog":     "Work log commands: create, list, latest\nExample: hp worklog latest --project ./my-project\n",
 	"cleanup":     "Cleanup commands: plan, apply\nExample: hp cleanup plan --project ./my-project --older-than 30d\n",
-	"state":       "State commands: get, update, validate\nExample: hp state validate --project ./my-project\n",
+	"state":       "State commands: get, update, validate, reconcile\nExample: hp state reconcile --project ./my-project\n",
 	"hook":        "Hook commands: install, session-start, stop\nExample: hp hook install --project ./my-project\n",
 	"skill":       "Skill commands: sync\nExample: hp skill sync --project ./my-project --targets claude,agents\n",
 	"coordinator": "Coordinator commands: assign, get, clear, plan, dispatch\nExample: hp coordinator assign --project ./my-project --registration-id <id>\n",
@@ -85,6 +86,11 @@ var commandHelp = map[string]string{
   Example: hp brief
   Example: hp brief --project ./my-project --format text --full
 `,
+	"finish": `hp finish --task-id <id> --id <worklog-id> --objective <text> --completed <text> --remaining <text> --next <text> [--project <directory>] [--status in_progress|completed|blocked|failed|cancelled] [--agent <name>] [--harness <name>] [--changes <text>] [--verification <text>] [--result <text>] [--evidence a,b] [--blockers <text>] [--dry-run] [--format json|text]
+	  Update one task, append its work log, and reconcile task-backed project state as one closeout operation.
+	  The project defaults to the current directory; agent and harness default to the detected provider.
+	  Example: hp finish --task-id inventory-api --id api-session --objective 'Implement API' --completed 'Added routes' --remaining 'None' --verification 'go test ./...' --next 'Review the change'
+	`,
 	"project init": `hp project init --path <directory> [--name <name>] [--if-not-exists] [--no-git] [--dry-run] [--format json|text]
   Create a portable Harness Project with spec, handoff, skill, state, and harness entry points,
   Claude Code session hooks, and its own Git repository with an initial commit (skip with --no-git).
@@ -96,9 +102,17 @@ var commandHelp = map[string]string{
   Example: hp project status --path ./checkout --json
 `,
 	"project validate": `hp project validate --path <directory> [--format json|text]
-  Validate project structure. Exits 1 if invalid.
+	  Validate the project file structure. Use project doctor for operational drift. Exits 1 if invalid.
   Example: hp project validate --path ./checkout --json
 `,
+	"project doctor": `hp project doctor [--path <directory>] [--format json|text]
+	  Detect stale state, task/state disagreement, missing evidence, skill mount drift, malformed work logs, and missing or unregistered repository worktrees. Exits 1 when findings exist.
+	  Example: hp project doctor --path ./checkout
+	`,
+	"project upgrade": `hp project upgrade [--path <directory>] [--dry-run] [--format json|text]
+	  Refresh managed workflow instructions, Claude hooks, and all Codex/Claude/Cursor/Agent Skills mounts without replacing project-specific instructions.
+	  Example: hp project upgrade --path ./checkout --dry-run
+	`,
 	"project serve": `hp project serve --path <directory> [--port 0..65535] [--open] [--format json|text]
   Serve a read-only local dashboard with goals, task progress, state, repositories, and recent agent activity. Binds to 127.0.0.1 only. Press Ctrl-C to stop.
   Example: hp project serve --path ./checkout --open
@@ -162,7 +176,7 @@ var commandHelp = map[string]string{
   Update run state and record timestamps for terminal states.
 `,
 	"agent register": `hp agent register --project <directory> [--harness <name>] [--session-id <provider-id>] [--worktree <path>] [--task-id <id>] [--availability available|busy|paused] [--focus <text>] [--modules a,b] [--capabilities a,b] [--ttl 2h] [--dry-run]
-  Record this provider session as a durable project participant and create a local delivery hint. cc is an alias for claude-code. The CLI cannot infer your session ID.
+	  Record this provider session as a durable project participant and create a local delivery hint. The CLI detects HP_SESSION_ID or CODEX_THREAD_ID when available; otherwise pass the actual provider ID. The default worktree is the current directory when it is inside the project, otherwise the project root. cc is an alias for claude-code.
 `,
 	"agent discover": `hp agent discover --project <directory> [--harness <name>] [--module <name>] [--capability <name>] [--include-stale] [--format json|text]
   Find all registered project participants. --include-stale is a compatibility no-op.
@@ -272,6 +286,10 @@ var commandHelp = map[string]string{
 	"state update": `hp state update --project <directory> [--phase <phase>] [--health unknown|on_track|at_risk|blocked|complete] [--progress <summary>] [--current-goal-id <id>] [--active-tasks a,b] [--blocked-tasks a,b] [--next-actions a,b] [--risks a,b] [--last-verified-at <timestamp>] [--source-refs a,b] [--dry-run]
   Update the materialized state snapshot after changing goals, tasks, runs, or verification evidence.
 `,
+	"state reconcile": `hp state reconcile [--project <directory>] [--dry-run] [--format json|text]
+	  Derive active and blocked task IDs and task progress from task records, preserve human judgments, and reference the latest work log.
+	  Example: hp state reconcile --project ./my-project
+	`,
 	"schema list": `hp schema list [--format json|text]
   List introspectable CLI commands.
   Example: hp schema list --json
@@ -302,9 +320,12 @@ var commandSchemas = map[string]commandSchema{
 	"hook session-start":   {"hook session-start", "Session start hook: register the session and print the brief", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook session-start --harness claude-code"}},
 	"hook stop":            {"hook stop", "Stop hook: ask once for a work log after changes", []flagSchema{{"harness", "string", true, nil}, {"project", "string", false, nil}}, []string{"hp hook stop --harness claude-code"}},
 	"brief":                {"brief", "Summarize the project for a new agent session", []flagSchema{{"project", "string", false, nil}, {"full", "boolean", false, nil}, {"lines", "integer", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp brief --format text"}},
+	"finish":               {"finish", "Close a session by updating its task, work log, and derived state", []flagSchema{{"project", "string", false, nil}, {"id", "string", true, nil}, {"task-id", "string", true, nil}, {"status", "enum", false, model.TaskStatuses()}, {"agent", "string", false, nil}, {"harness", "string", false, nil}, {"objective", "string", true, nil}, {"completed", "string", true, nil}, {"remaining", "string", true, nil}, {"changes", "string", false, nil}, {"verification", "string", false, nil}, {"next", "string", true, nil}, {"blockers", "string", false, nil}, {"result", "string", false, nil}, {"evidence", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp finish --task-id inventory-api --id api-session --objective 'Implement API' --completed 'Added routes' --remaining 'None' --next 'Review'"}},
 	"project init":         {"project init", "Create a Harness Project", []flagSchema{{"path", "string", true, nil}, {"name", "string", false, nil}, {"if-not-exists", "boolean", false, nil}, {"no-git", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project init --path ./my-project --dry-run"}},
 	"project status":       {"project status", "Inspect a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project status --path ./my-project --json"}},
 	"project validate":     {"project validate", "Validate a Harness Project", []flagSchema{{"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project validate --path ./my-project --json"}},
+	"project doctor":       {"project doctor", "Detect operational drift in a Harness Project", []flagSchema{{"path", "string", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project doctor --path ./my-project --json"}},
+	"project upgrade":      {"project upgrade", "Refresh managed instructions, hooks, and skill mounts", []flagSchema{{"path", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project upgrade --path ./my-project --dry-run"}},
 	"project serve":        {"project serve", "Serve a read-only local project dashboard", []flagSchema{{"path", "string", true, nil}, {"port", "integer", false, nil}, {"open", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp project serve --path ./my-project --open"}},
 	"file write":           {"file write", "Write a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"from", "string", true, nil}, {"replace", "boolean", false, nil}, {"if-not-exists", "boolean", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file write --project ./my-project --section spec --path requirements.md --from ./draft.md"}},
 	"file read":            {"file read", "Read a project file", []flagSchema{{"project", "string", true, nil}, {"section", "enum", true, []string{"spec", "goals", "tasks", "runs", "agents", "context", "handoffs", "events", "verification", "skills", "scripts", "state", "artifacts", "integrations"}}, {"path", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp file read --project ./my-project --section spec --path requirements.md --json"}},
@@ -360,6 +381,7 @@ var commandSchemas = map[string]commandSchema{
 	"state get":            {"state get", "Read project state", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state get --project ./my-project"}},
 	"state validate":       {"state validate", "Validate project state", []flagSchema{{"project", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state validate --project ./my-project"}},
 	"state update":         {"state update", "Update project state", []flagSchema{{"project", "string", true, nil}, {"phase", "string", false, nil}, {"health", "enum", false, []string{"unknown", "on_track", "at_risk", "blocked", "complete"}}, {"progress", "string", false, nil}, {"current-goal-id", "string", false, nil}, {"active-tasks", "string", false, nil}, {"blocked-tasks", "string", false, nil}, {"next-actions", "string", false, nil}, {"risks", "string", false, nil}, {"last-verified-at", "string", false, nil}, {"source-refs", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state update --project ./my-project --health on_track --progress '1/3 KRs achieved' --next-actions 'Verify projections' --source-refs state/project-state.json"}},
+	"state reconcile":      {"state reconcile", "Derive task-backed project state", []flagSchema{{"project", "string", false, nil}, {"dry-run", "boolean", false, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp state reconcile --project ./my-project"}},
 	"schema list":          {"schema list", "List CLI command schemas", []flagSchema{{"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema list --json"}},
 	"schema get":           {"schema get", "Inspect a CLI command schema", []flagSchema{{"command", "string", true, nil}, {"format", "enum", false, []string{"json", "text"}}}, []string{"hp schema get --command 'project init' --json"}},
 }

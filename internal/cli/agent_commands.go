@@ -86,6 +86,10 @@ func (a app) agentRegister(args []string) int {
 		if !filepath.IsAbs(resolvedWorktree) {
 			resolvedWorktree = filepath.Join(s.Root, resolvedWorktree)
 		}
+	} else if cwd, cwdErr := os.Getwd(); cwdErr == nil && pathWithinProject(s.Root, cwd) {
+		resolvedWorktree = cwd
+	} else {
+		resolvedWorktree = s.Root
 	}
 	registry := presence.Registry{Root: s.Root}
 	requested := presence.Registration{
@@ -124,6 +128,11 @@ func (a app) agentRegister(args []string) int {
 	}
 	a.emit(result, "Recorded participant "+item.ID+" ("+item.Harness+" / "+item.SessionID+")", selectedFormat(*format, *jsonFlag, a.out))
 	return 0
+}
+
+func pathWithinProject(root, path string) bool {
+	relative, err := filepath.Rel(root, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 func (a app) agentDiscover(args []string) int {

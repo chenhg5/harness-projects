@@ -15,6 +15,8 @@ go build -o ./bin/hp ./cmd/hp
 ```bash
 hp project init --path ./my-project --name "My Project"   # own Git repo; --no-git to skip
 hp brief --project ./my-project
+hp project doctor --path ./my-project
+hp project upgrade --path ./my-project --dry-run
 hp hook install --project ./my-project
 hp skill sync --project ./my-project --targets claude,agents --dry-run
 hp skill sync --project ./my-project --targets claude,agents
@@ -64,6 +66,7 @@ hp agent heartbeat --project ./my-project --id <registration-id> \
 hp agent unregister --project ./my-project --id <registration-id>
 hp agent prune --project ./my-project --older-than 7d --dry-run
 hp state validate --project ./my-project
+hp state reconcile --project ./my-project
 hp repository add --project ./my-project --id api --path ../api --default-branch main
 hp worktree create --project ./my-project --id api-task --repository-id api
 hp worktree list --project ./my-project --status active
@@ -78,6 +81,9 @@ hp handoff latest --project ./my-project --format text
 hp worklog create --project ./my-project --id session-001 --agent codex \
   --objective "Implement memory" --completed "Added search" \
   --remaining "Add docs" --verification "go test ./..." --next "Review"
+hp finish --project ./my-project --task-id inventory-api --id session-002 \
+  --objective "Implement API" --completed "Added routes" \
+  --remaining "None" --verification "go test ./..." --next "Review"
 hp worklog latest --project ./my-project --format text
 hp cleanup plan --project ./my-project --older-than 30d
 hp cleanup apply --project ./my-project --older-than 30d
@@ -85,14 +91,43 @@ hp coordinator plan --project ./my-project --format json
 ```
 
 Commands that write files support `--dry-run`. A successful dry run exits with
-code `10`. Non-TTY output defaults to JSON. JSON data goes to stdout and
-machine-readable errors go to stderr.
+code `10`; `hp finish --dry-run` also returns `"dryRun": true`. Non-TTY output
+defaults to JSON. JSON data goes to stdout and machine-readable errors go to
+stderr.
 
 Work logs are chronological session records. Handoffs are responsibility
 transfers and may include branch, commit, and blocker details. Cleanup only
 selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
 the default action archives them under `archive/` and never selects durable
 project history.
+
+Use `hp finish` when the session has a task. Pass `--status in_progress` after a
+partial iteration so the task stays open while the work log and state remain
+consistent. It validates all three records
+before writing, updates the task, creates the work log, and derives active and
+blocked task IDs, task progress, next action, verification time, and source
+references in `state/project-state.json`. `hp worklog create` remains available
+for meaningful work that has no task record. Create a handoff in addition only
+when responsibility moves to another agent or harness; a handoff never replaces
+`hp finish`.
+
+## Project health and upgrades
+
+`hp project validate` checks the portable file structure. `hp project doctor`
+checks operational consistency: state freshness, task/state agreement, source
+references, work-log shape, all four skill mount targets, and registered versus
+physical repositories and worktrees. It exits `1` when it finds drift and does
+not modify the project.
+
+Use `hp state reconcile` to repair task-backed state drift without rewriting
+human judgments such as phase, health, risks, or an intentionally curated next
+action. It derives active and blocked task IDs and progress from task records.
+
+After installing a newer `hp`, preview `hp project upgrade --path . --dry-run`,
+then apply it without `--dry-run`. Upgrade maintains a marked workflow section
+inside existing instructions, merges Claude Code hooks, removes the legacy rule
+that ignored durable worktree records, and synchronizes Codex, Claude Code,
+Cursor, and `.agents/skills` mounts. Text outside the managed markers is kept.
 
 ## Session start: `hp brief`
 
@@ -136,6 +171,12 @@ links in the selected harness directories. The default target is `all`; use
 real file or directory. `--prune` removes only stale symlinks that still point
 into the project's canonical `skills/` tree.
 
+`hp context search` searches both structured records created by `hp context
+add` and ordinary Markdown or text notes below `context/` (excluding imports
+and the structured-memory storage tree). Every whitespace-separated query term
+must match. Retry with fewer or more specific terms when a broad query returns
+no results.
+
 ## Agent session discovery
 
 `hp agent register` and `hp task inbox` detect the current session when
@@ -150,7 +191,10 @@ with `hp agent register`. `cc` is accepted as an alias for `claude-code`.
 Agents can describe their current focus, modules, capabilities, worktree, and
 task. The registration command returns a registration ID for `heartbeat`,
 `get`, and `unregister`. `hp agent discover` returns JSON by default for other
-agents to filter by harness, module, or capability.
+agents to filter by harness, module, or capability. When `--worktree` is omitted,
+registration uses the current directory if it is inside the project; otherwise
+it uses the project root. Pass `--worktree` explicitly when working from an
+external repository checkout.
 
 Participation records are stored under `agents/sessions/` and tracked by project
 Git. They do not expire or carry an online/offline state. `hp agent discover`

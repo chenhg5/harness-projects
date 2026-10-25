@@ -107,15 +107,15 @@ func Load(root string, maxLines int) (Brief, error) {
 		b.Handoff = excerpt("handoffs/"+summary.LatestHandoff.Name, focus(summary.LatestHandoff.Content, "Next actions", "Blockers and risks"), maxLines)
 	}
 	if summary.LatestWorklog != nil && summary.State.UpdatedAt != "" && worklogTime(summary.LatestWorklog.Name) > summary.State.UpdatedAt {
-		b.Warnings = append(b.Warnings, "The state snapshot is older than the latest work log; trust the work log and plan, then run hp state update.")
+		b.Warnings = append(b.Warnings, "The state snapshot is older than the latest work log; trust the work log and plan, then run hp state reconcile.")
 	}
 	for _, repository := range summary.Repositories {
 		b.Repositories = append(b.Repositories, repository.ID)
 	}
 	where := quote(displayPath(b.Path))
 	b.WhenDone = []string{
-		"hp task update --project " + where + " --id <task> --status <in_progress|completed|blocked>",
-		"hp worklog create --project " + where + " --id <slug> --agent <you> --objective ... --completed ... --remaining ... --next ...",
+		"hp finish --project " + where + " --task-id <task> --id <slug> --objective ... --completed ... --remaining ... --next ...",
+		"hp project doctor --path " + where,
 	}
 	return b, nil
 }

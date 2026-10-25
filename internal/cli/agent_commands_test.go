@@ -40,6 +40,9 @@ func TestAgentRegistrationDoesNotRequireWakeupPrompt(t *testing.T) {
 }
 
 func TestAgentRegistrationDiscoveryLifecycle(t *testing.T) {
+	t.Setenv("CODEX_THREAD_ID", "")
+	t.Setenv("HP_SESSION_ID", "")
+	t.Setenv("HP_HARNESS", "")
 	root := filepath.Join(t.TempDir(), "project")
 	if code, _, stderr := run(t, "project", "init", "--path", root); code != 0 {
 		t.Fatalf("init: code=%d stderr=%s", code, stderr)
@@ -94,5 +97,50 @@ func TestAgentRegistrationDiscoveryLifecycle(t *testing.T) {
 	}
 	if code, stdout, stderr := run(t, "agent", "discover", "--project", root); code != 0 || stderr != "" || !strings.Contains(stdout, created.Agent.ID) {
 		t.Fatalf("unregister erased participant: code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	}
+}
+
+func TestAgentRegistrationDoesNotReuseCopiedExternalWorktree(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "project")
+	external := t.TempDir()
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init: code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "agent", "register", "--project", root, "--harness", "codex", "--session-id", "copied-session", "--worktree", external); code != 0 {
+		t.Fatalf("initial register: code=%d stderr=%s", code, stderr)
+	}
+	originalDirectory, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(originalDirectory); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
+	})
+	code, output, stderr := run(t, "agent", "register", "--project", root, "--harness", "codex", "--session-id", "copied-session")
+	if code != 0 || stderr != "" {
+		t.Fatalf("register in copied project: code=%d stderr=%s", code, stderr)
+	}
+	var result struct {
+		Agent struct {
+			Worktree string `json:"worktree"`
+		} `json:"agent"`
+		DeliveryLease struct {
+			Worktree string `json:"worktree"`
+		} `json:"deliveryLease"`
+	}
+	if err := json.Unmarshal([]byte(output), &result); err != nil {
+		t.Fatal(err)
+	}
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DeliveryLease.Worktree != canonicalRoot || result.Agent.Worktree != "." {
+		t.Fatalf("registration reused stale worktree: %s", output)
 	}
 }

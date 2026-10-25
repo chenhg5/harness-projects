@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -136,5 +137,142 @@ func TestContextAndHandoffLifecycle(t *testing.T) {
 	code, stdout, stderr = run(t, "handoff", "latest", "--project", root, "--format", "text")
 	if code != 0 || stderr != "" || !bytes.Contains([]byte(stdout), []byte("Build memory")) {
 		t.Fatalf("handoff latest code=%d stderr=%s stdout=%s", code, stderr, stdout)
+	}
+}
+
+func TestContextSearchIncludesPlainNotes(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	if err := os.WriteFile(filepath.Join(root, "context", "api-boundary.md"), []byte("Portable API boundary decision"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run(t, "context", "search", "--project", root, "--query", "portable boundary", "--json")
+	if code != 0 || stderr != "" {
+		t.Fatalf("search code=%d stderr=%s", code, stderr)
+	}
+	var matches []struct {
+		Type string `json:"type"`
+		Path string `json:"path"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &matches); err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 1 || matches[0].Type != "file" || matches[0].Path != "context/api-boundary.md" {
+		t.Fatalf("unexpected matches: %s", stdout)
+	}
+}
+
+func TestFinishClosesTaskWorklogAndStateTogether(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "api", "--title", "Build API", "--status", "ready"); code != 0 {
+		t.Fatalf("task create code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "task", "update", "--project", root, "--id", "api", "--status", "in_progress"); code != 0 {
+		t.Fatalf("task update code=%d stderr=%s", code, stderr)
+	}
+	code, _, stderr := run(t, "finish", "--project", root, "--task-id", "api", "--id", "api-session", "--agent", "codex", "--objective", "Build API", "--completed", "Added routes", "--remaining", "None", "--verification", "go test ./...", "--next", "Review output")
+	if code != 0 || stderr != "" {
+		t.Fatalf("finish code=%d stderr=%s", code, stderr)
+	}
+	code, stdout, stderr := run(t, "task", "get", "--project", root, "--id", "api", "--json")
+	if code != 0 || stderr != "" {
+		t.Fatalf("task get code=%d stderr=%s", code, stderr)
+	}
+	var task struct {
+		Status string `json:"status"`
+		Result string `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &task); err != nil {
+		t.Fatal(err)
+	}
+	if task.Status != "completed" || task.Result != "Added routes" {
+		t.Fatalf("unexpected task: %s", stdout)
+	}
+	code, stdout, stderr = run(t, "state", "get", "--project", root, "--json")
+	if code != 0 || stderr != "" {
+		t.Fatalf("state get code=%d stderr=%s", code, stderr)
+	}
+	var state struct {
+		Progress    string   `json:"progress"`
+		NextActions []string `json:"nextActions"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &state); err != nil {
+		t.Fatal(err)
+	}
+	if state.Progress != "1 of 1 tasks completed" || len(state.NextActions) < 1 || state.NextActions[0] != "Review output" {
+		t.Fatalf("unexpected state: %s", stdout)
+	}
+	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 0 || stderr != "" {
+		t.Fatalf("doctor after finish code=%d stderr=%s stdout=%s", code, stderr, stdout)
+	}
+}
+
+func TestFinishDryRunIsExplicitAndDoesNotWrite(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "api", "--title", "Build API", "--status", "in_progress"); code != 0 {
+		t.Fatalf("task create code=%d stderr=%s", code, stderr)
+	}
+	code, stdout, stderr := run(t, "finish", "--project", root, "--task-id", "api", "--id", "api-session", "--objective", "Build API", "--completed", "Drafted routes", "--remaining", "Tests", "--next", "Run tests", "--dry-run")
+	if code != 10 || stderr != "" {
+		t.Fatalf("finish dry-run code=%d stderr=%s", code, stderr)
+	}
+	var result struct {
+		DryRun bool `json:"dryRun"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil || !result.DryRun {
+		t.Fatalf("dry-run result is not explicit: %s err=%v", stdout, err)
+	}
+	if matches, err := filepath.Glob(filepath.Join(root, "worklogs", "*-api-session.md")); err != nil || len(matches) != 0 {
+		t.Fatalf("dry-run wrote worklog: matches=%v err=%v", matches, err)
+	}
+}
+
+func TestProjectDoctorAndUpgradeRepairSkillDrift(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	link := filepath.Join(root, ".agents", "skills", "project-context")
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, _ := run(t, "project", "doctor", "--path", root, "--json"); code != 1 || !bytes.Contains([]byte(stdout), []byte("skill_mount_drift")) {
+		t.Fatalf("doctor did not report drift: code=%d stdout=%s", code, stdout)
+	}
+	if code, _, stderr := run(t, "project", "upgrade", "--path", root); code != 0 || stderr != "" {
+		t.Fatalf("upgrade code=%d stderr=%s", code, stderr)
+	}
+	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 0 || stderr != "" {
+		t.Fatalf("doctor after upgrade code=%d stderr=%s stdout=%s", code, stderr, stdout)
+	}
+}
+
+func TestStateReconcileRepairsTaskStateDrift(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "task", "create", "--project", root, "--id", "api", "--title", "Build API", "--status", "ready"); code != 0 {
+		t.Fatalf("task create code=%d stderr=%s", code, stderr)
+	}
+	if code, _, stderr := run(t, "task", "update", "--project", root, "--id", "api", "--status", "in_progress"); code != 0 {
+		t.Fatalf("task update code=%d stderr=%s", code, stderr)
+	}
+	if code, stdout, _ := run(t, "project", "doctor", "--path", root, "--json"); code != 1 || !bytes.Contains([]byte(stdout), []byte("task_state_drift")) {
+		t.Fatalf("doctor did not report state drift: code=%d stdout=%s", code, stdout)
+	}
+	if code, _, stderr := run(t, "state", "reconcile", "--project", root); code != 0 || stderr != "" {
+		t.Fatalf("reconcile code=%d stderr=%s", code, stderr)
+	}
+	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 0 || stderr != "" {
+		t.Fatalf("doctor after reconcile code=%d stderr=%s stdout=%s", code, stderr, stdout)
 	}
 }
