@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,7 +11,16 @@ import (
 	"strings"
 )
 
-var Version = "v0.0.9"
+var Version = "v0.0.10"
+
+const (
+	exitOperationFailed  = 1
+	exitInvalidArguments = 2
+	exitNotFound         = 3
+	exitPermissionDenied = 4
+	exitConflict         = 5
+	exitDryRun           = 10
+)
 
 type app struct {
 	in  io.Reader
@@ -46,14 +56,14 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 	if args[0] == "brief" {
 		if hasHelp(args[1:]) {
-			fmt.Fprint(out, commandHelp["brief"])
+			fmt.Fprint(out, renderCommandHelp(commandSchemas["brief"]))
 			return 0
 		}
 		return a.brief(args[1:])
 	}
 	if args[0] == "finish" {
 		if hasHelp(args[1:]) {
-			fmt.Fprint(out, commandHelp["finish"])
+			fmt.Fprint(out, renderCommandHelp(commandSchemas["finish"]))
 			return 0
 		}
 		return a.finish(args[1:])
@@ -73,8 +83,8 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 	command := args[0] + " " + args[1]
 	if hasHelp(args[2:]) {
-		if help, ok := commandHelp[command]; ok {
-			fmt.Fprint(out, help)
+		if schema, ok := commandSchemas[command]; ok {
+			fmt.Fprint(out, renderCommandHelp(schema))
 			return 0
 		}
 	}
@@ -91,6 +101,10 @@ func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.projectUpgrade(args[2:])
 	case "project serve":
 		return a.projectServe(args[2:])
+	case "layout list":
+		return a.layoutList(args[2:])
+	case "layout add":
+		return a.layoutAdd(args[2:])
 	case "file write":
 		return a.fileWrite(args[2:])
 	case "file read":
@@ -279,9 +293,13 @@ func (a app) emit(data any, human, format string) {
 }
 
 func (a app) fail(err failure) int {
+	return a.failWithRetryability(err, false)
+}
+
+func (a app) failWithRetryability(err failure, retryable bool) int {
 	_ = json.NewEncoder(a.err).Encode(map[string]any{
 		"error": err.kind, "message": err.message, "suggestion": err.suggestion,
-		"retryable": false, "input": err.input,
+		"retryable": retryable, "input": err.input, "exitCode": err.code,
 	})
 	return err.code
 }
@@ -291,16 +309,17 @@ func (a app) parseError(err error) int {
 }
 
 func (a app) operationError(err error, input string) int {
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) && errors.Is(err, os.ErrPermission) {
-		return a.fail(failure{4, "permission_denied", err.Error(), "Check directory permissions", input})
+	if errors.Is(err, os.ErrPermission) {
+		return a.fail(failure{exitPermissionDenied, "permission_denied", err.Error(), "Check directory permissions", input})
 	}
 	if errors.Is(err, os.ErrNotExist) {
-		return a.fail(failure{3, "not_found", err.Error(), "Check the path and create the resource if needed", input})
+		return a.fail(failure{exitNotFound, "not_found", err.Error(), "Check the path and create the resource if needed", input})
 	}
-	message := err.Error()
-	if strings.Contains(message, "already exists") || strings.Contains(message, "appeared since preview") || strings.Contains(message, "changed since preview") {
-		return a.fail(failure{5, "conflict", message, "Use --if-not-exists or --replace where supported, or choose another path", input})
+	if errors.Is(err, os.ErrExist) {
+		return a.fail(failure{exitConflict, "conflict", err.Error(), "Use --if-not-exists or --replace where supported, or choose another path", input})
 	}
-	return a.fail(failure{1, "operation_failed", message, "Inspect the project path and retry", input})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return a.failWithRetryability(failure{exitOperationFailed, "transient_failure", err.Error(), "Inspect the previous attempt, then retry when safe", input}, true)
+	}
+	return a.fail(failure{exitOperationFailed, "operation_failed", err.Error(), "Inspect the project path and retry", input})
 }

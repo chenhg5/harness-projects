@@ -18,11 +18,12 @@ import (
 func (a app) finish(args []string) int {
 	fs := newFlags("finish")
 	projectPath := fs.String("project", ".", "project directory")
-	id := fs.String("id", "", "work log id")
+	id := fs.String("id", "", "work log id (not the provider session ID)")
 	taskID := fs.String("task-id", "", "task to update")
 	status := fs.String("status", "completed", "in_progress|completed|blocked|failed|cancelled")
 	agent := fs.String("agent", "", "agent identity (defaults to detected harness)")
 	harness := fs.String("harness", "", "coding harness (detected when omitted)")
+	sessionID := fs.String("session-id", "", "actual provider session ID (detected when available)")
 	objective := fs.String("objective", "", "session objective")
 	completed := fs.String("completed", "", "completed work")
 	remaining := fs.String("remaining", "", "work not completed")
@@ -40,14 +41,12 @@ func (a app) finish(args []string) int {
 	if *id == "" || *taskID == "" {
 		return a.parseError(fmt.Errorf("--id and --task-id are required"))
 	}
-	if current, ok := session.Detect(); ok && *harness == "" {
-		*harness = current.Harness
-	}
+	session.Fill(harness, sessionID)
 	if *agent == "" {
 		*agent = *harness
 	}
 	now := timestamp()
-	record := worklog.Record{ID: *id, Agent: *agent, Harness: *harness, TaskID: *taskID, CreatedAt: now, Objective: *objective, Completed: *completed, Remaining: *remaining, Changes: *changes, Verification: *verification, Next: *next, Blockers: *blockers}
+	record := worklog.Record{ID: *id, Agent: *agent, Harness: *harness, SessionID: *sessionID, TaskID: *taskID, CreatedAt: now, Objective: *objective, Completed: *completed, Remaining: *remaining, Changes: *changes, Verification: *verification, Next: *next, Blockers: *blockers}
 	if err := record.Validate(); err != nil {
 		return a.parseError(err)
 	}

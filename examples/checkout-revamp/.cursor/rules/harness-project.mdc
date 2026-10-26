@@ -4,3 +4,7 @@ alwaysApply: true
 ---
 
 Run `hp brief` at the start of work and read `AGENTS.md` and `PROJECT.md`. Use `state/current-plan.md`, `spec/`, and `handoffs/` for portable project context, and record progress with `hp worklog create` before stopping.
+
+<!-- hp:managed-workflow v2 -->
+Run `hp brief` before work. Check `hp layout list --project .` before creating a top-level directory. Use `hp finish` for meaningful closeout and add a handoff only when responsibility moves. Run `hp project doctor --path .` before stopping. Do not commit or push unless explicitly requested.
+<!-- /hp:managed-workflow -->

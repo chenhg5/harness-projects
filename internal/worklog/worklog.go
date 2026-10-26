@@ -19,6 +19,7 @@ type Record struct {
 	ID           string `json:"id"`
 	Agent        string `json:"agent"`
 	Harness      string `json:"harness,omitempty"`
+	SessionID    string `json:"sessionId,omitempty"`
 	TaskID       string `json:"taskId,omitempty"`
 	RunID        string `json:"runId,omitempty"`
 	CreatedAt    string `json:"createdAt"`
@@ -38,6 +39,11 @@ func (r Record) Validate() error {
 	if strings.TrimSpace(r.Agent) == "" {
 		return fmt.Errorf("worklog agent is required")
 	}
+	if r.SessionID != "" {
+		if err := model.ValidateProviderSessionID(r.SessionID); err != nil {
+			return fmt.Errorf("invalid worklog session id: %w", err)
+		}
+	}
 	if strings.TrimSpace(r.Objective) == "" || strings.TrimSpace(r.Completed) == "" || strings.TrimSpace(r.Remaining) == "" || strings.TrimSpace(r.Next) == "" {
 		return fmt.Errorf("worklog objective, completed, remaining, and next are required")
 	}
@@ -56,8 +62,8 @@ func (r Record) Filename() (string, error) {
 }
 
 func (r Record) Markdown() string {
-	return fmt.Sprintf("# Work log: %s\n\n- Agent: %s\n- Harness: %s\n- Created: %s\n- Task: %s\n- Run: %s\n\n## Objective\n\n%s\n\n## Completed\n\n%s\n\n## Remaining\n\n%s\n\n## Changes\n\n%s\n\n## Verification\n\n%s\n\n## Next action\n\n%s\n\n## Blockers\n\n%s\n",
-		r.ID, r.Agent, optional(r.Harness), r.CreatedAt, optional(r.TaskID), optional(r.RunID),
+	return fmt.Sprintf("# Work log: %s\n\n- Agent: %s\n- Harness: %s\n- Session ID: %s\n- Created: %s\n- Task: %s\n- Run: %s\n\n## Objective\n\n%s\n\n## Completed\n\n%s\n\n## Remaining\n\n%s\n\n## Changes\n\n%s\n\n## Verification\n\n%s\n\n## Next action\n\n%s\n\n## Blockers\n\n%s\n",
+		r.ID, r.Agent, optional(r.Harness), optional(r.SessionID), r.CreatedAt, optional(r.TaskID), optional(r.RunID),
 		r.Objective, r.Completed, r.Remaining, optional(r.Changes), optional(r.Verification), r.Next, optional(r.Blockers))
 }
 

@@ -1,6 +1,6 @@
 ---
 name: harness-projects
-description: Work in a portable Harness Project using hp for shared goals, tasks, memory, work logs, handoffs, cleanup, and skill synchronization across Claude Code, Cursor, Codex, and Agent Skills-compatible harnesses.
+description: Work in a portable Harness Project using hp for shared goals, tasks, memory, work logs, handoffs, directory layout governance, cleanup, and skill synchronization across Claude Code, Cursor, Codex, and Agent Skills-compatible harnesses.
 ---
 
 # Harness Projects
@@ -33,6 +33,8 @@ hp handoff latest --project <project> --format text
 hp project validate --path <project>
 hp project doctor --path <project>
 hp project upgrade --path <project> --dry-run
+hp layout list --project <project> --format text
+hp layout add --project <project> --name lib --description "Third-party reference material" --dry-run
 hp skill sync --project <project> --targets codex,claude,cursor,agents --dry-run
 hp coordinator dispatch --project <project> --task-id <task-id> \
   --harness <name> --session-id <actual-id> --worktree <project-relative-path> \
@@ -40,6 +42,14 @@ hp coordinator dispatch --project <project> --task-id <task-id> \
 ```
 
 Use `hp file write` for project sections instead of writing through an arbitrary path. Use `--dry-run` before mutations when the change is broad or destructive.
+Before constructing an unfamiliar command, run `hp help <noun> <verb>` or
+`hp schema get --command "<noun> <verb>" --json`; help and schema share one
+contract and enumerate every flag, accepted value, default, and example. Do not
+guess a flag or output shape from a similar command. Treat JSON errors on stderr as data: branch
+on `error`, `exitCode`, and `retryable`, then use `suggestion` to recover.
+Before creating a top-level directory, use `hp layout list` to find the intended
+location. Register an intentional project-specific addition with `hp layout add`;
+do not silently create agent-specific roots.
 For direct delivery, omit `--dry-run` only after checking the exact target
 session and worktree. Preflight failure leaves the task in its session inbox.
 If a provider process started but its result is uncertain, inspect the run
@@ -55,17 +65,27 @@ appends the work log, and reconciles task-backed state together. Use
 `--status in_progress` when the session made progress but the task remains open:
 
 ```bash
-hp finish --project <project> --task-id <task-id> --id <session-id> \
+hp finish --project <project> --task-id <task-id> --id <log-slug> \
   --agent <agent> --harness <claude|cursor|codex|other> \
   --objective "..." --completed "..." --remaining "..." \
   --verification "..." --next "..."
 ```
 
+`--id` names the log, not the provider session. `hp` detects the current
+session when available; otherwise pass the actual `--session-id` explicitly.
+Never invent one. Write the objective, concrete results, remaining work, and
+an actionable next step so another agent can resume without the chat history.
+Include verification results and limitations when relevant. Use plain language
+that teammates outside the implementation area can understand. Exact English
+headings are a CLI template, not a requirement for historical or translated
+logs.
+
 Use `hp worklog create` only when no task record exists. `hp finish` reconciles
 task-backed fields; update goal status, project phase, health, and project-level
 next actions separately when they changed. Run `hp project doctor` before
 closeout; it detects stale state, task/state disagreement, missing evidence,
-malformed logs, skill mount drift, and repository/worktree drift.
+malformed logs, skill mount drift, repository/worktree drift, and unregistered
+top-level directories.
 
 Create a handoff only when another agent or harness will take ownership. A
 handoff names the source and destination and preserves repository branches,

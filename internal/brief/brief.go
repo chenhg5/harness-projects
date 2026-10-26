@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/chenhg5/harness-projects/internal/dashboard"
+	"github.com/chenhg5/harness-projects/internal/layout"
 	"github.com/chenhg5/harness-projects/internal/runtime"
 	"github.com/chenhg5/harness-projects/internal/store"
 )
@@ -52,25 +53,26 @@ type Note struct {
 }
 
 type Brief struct {
-	Project      string   `json:"project"`
-	Path         string   `json:"path"`
-	Phase        string   `json:"phase,omitempty"`
-	Health       string   `json:"health,omitempty"`
-	Progress     string   `json:"progress,omitempty"`
-	UpdatedAt    string   `json:"updatedAt,omitempty"`
-	Goal         *Goal    `json:"goal,omitempty"`
-	NextActions  []string `json:"nextActions,omitempty"`
-	Risks        []string `json:"risks,omitempty"`
-	Plan         *Note    `json:"plan,omitempty"`
-	Warnings     []string `json:"warnings,omitempty"`
-	InProgress   []Task   `json:"inProgress"`
-	Ready        []Task   `json:"ready"`
-	Blocked      []Task   `json:"blocked"`
-	MoreTasks    int      `json:"moreTasks,omitempty"`
-	Worklog      *Note    `json:"latestWorklog,omitempty"`
-	Handoff      *Note    `json:"latestHandoff,omitempty"`
-	Repositories []string `json:"repositories,omitempty"`
-	WhenDone     []string `json:"whenDone"`
+	Project      string         `json:"project"`
+	Path         string         `json:"path"`
+	Phase        string         `json:"phase,omitempty"`
+	Health       string         `json:"health,omitempty"`
+	Progress     string         `json:"progress,omitempty"`
+	UpdatedAt    string         `json:"updatedAt,omitempty"`
+	Goal         *Goal          `json:"goal,omitempty"`
+	NextActions  []string       `json:"nextActions,omitempty"`
+	Risks        []string       `json:"risks,omitempty"`
+	Plan         *Note          `json:"plan,omitempty"`
+	Warnings     []string       `json:"warnings,omitempty"`
+	InProgress   []Task         `json:"inProgress"`
+	Ready        []Task         `json:"ready"`
+	Blocked      []Task         `json:"blocked"`
+	MoreTasks    int            `json:"moreTasks,omitempty"`
+	Worklog      *Note          `json:"latestWorklog,omitempty"`
+	Handoff      *Note          `json:"latestHandoff,omitempty"`
+	Repositories []string       `json:"repositories,omitempty"`
+	Directories  []layout.Entry `json:"projectDirectories,omitempty"`
+	WhenDone     []string       `json:"whenDone"`
 }
 
 // Load reads the project at root. maxLines limits each free-text section; 0 keeps everything.
@@ -111,6 +113,15 @@ func Load(root string, maxLines int) (Brief, error) {
 	}
 	for _, repository := range summary.Repositories {
 		b.Repositories = append(b.Repositories, repository.ID)
+	}
+	contract, exists, layoutErr := layout.Load(summary.Path)
+	if layoutErr != nil {
+		b.Warnings = append(b.Warnings, "The project directory contract is invalid; run hp project doctor and repair .harness-project/layout.json.")
+	} else {
+		b.Directories = layout.ProjectEntries(contract)
+		if !exists {
+			b.Warnings = append(b.Warnings, "The project directory contract is missing; run hp project upgrade --path . before adding top-level directories.")
+		}
 	}
 	where := quote(displayPath(b.Path))
 	b.WhenDone = []string{
@@ -301,6 +312,12 @@ func (b Brief) Markdown() string {
 	writeNote(&w, "Latest handoff", b.Handoff)
 	if len(b.Repositories) > 0 {
 		fmt.Fprintf(&w, "\n## Repositories\n\n%s (worktrees under repos/)\n", strings.Join(b.Repositories, ", "))
+	}
+	if len(b.Directories) > 0 {
+		w.WriteString("\n## Project-specific directories\n\n")
+		for _, directory := range b.Directories {
+			fmt.Fprintf(&w, "- `%s/` — %s\n", directory.Path, directory.Description)
+		}
 	}
 	w.WriteString("\n## When you finish or stop\n\n")
 	for _, command := range b.WhenDone {

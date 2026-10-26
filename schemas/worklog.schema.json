@@ -8,6 +8,7 @@
     "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
     "agent": {"type": "string", "minLength": 1},
     "harness": {"type": "string"},
+    "sessionId": {"type": "string", "minLength": 1, "description": "Actual provider session ID when available; distinct from the work log ID."},
     "taskId": {"type": "string"},
     "runId": {"type": "string"},
     "createdAt": {"type": "string", "format": "date-time"},

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/chenhg5/harness-projects/internal/hooks"
+	"github.com/chenhg5/harness-projects/internal/layout"
 	"github.com/chenhg5/harness-projects/internal/skillmount"
 )
 
@@ -44,6 +45,7 @@ func PlanUpgrade(path string) (UpgradePlan, error) {
 	plan := UpgradePlan{Action: "project.upgrade", Path: root, Changes: []Action{}, files: map[string][]byte{}}
 	managed := map[string]string{
 		"AGENTS.md":                              managedWorkflowInstructions(),
+		"CLAUDE.md":                              managedWorkflowInstructions(),
 		"skills/shared/project-context/SKILL.md": managedSkillInstructions(),
 		"context/README.md":                      managedContextInstructions(),
 		".cursor/rules/harness-project.mdc":      managedCursorInstructions(),
@@ -84,6 +86,18 @@ func PlanUpgrade(path string) (UpgradePlan, error) {
 		}
 		plan.Changes = append(plan.Changes, Action{Operation: operation, Path: settingsPath})
 		plan.files[settingsPath] = merged
+	}
+
+	layoutPath := filepath.Join(root, filepath.FromSlash(layout.RelativePath))
+	if _, readErr := os.Stat(layoutPath); os.IsNotExist(readErr) {
+		content, err := layout.DefaultBytes()
+		if err != nil {
+			return UpgradePlan{}, err
+		}
+		plan.Changes = append(plan.Changes, Action{Operation: "create_file", Path: layoutPath})
+		plan.files[layoutPath] = content
+	} else if readErr != nil {
+		return UpgradePlan{}, readErr
 	}
 
 	ignorePath := filepath.Join(root, ".gitignore")
@@ -143,6 +157,9 @@ func writeGeneratedFile(path string, content []byte) error {
 	if err := temp.Close(); err != nil {
 		return err
 	}
+	if err := os.Chmod(temp.Name(), 0644); err != nil {
+		return err
+	}
 	return os.Rename(temp.Name(), path)
 }
 
@@ -171,6 +188,7 @@ func managedWorkflowInstructions() string {
 - Start with ` + "`hp brief`" + `; use ` + "`hp project doctor --path .`" + ` when the brief reports drift.
 - Continue relevant in-progress work from the brief, or use ` + "`hp task ready`" + ` for unstarted tasks; start one with ` + "`hp task update --status in_progress`" + `.
 - Keep durable research in ` + "`context/`" + `; ` + "`hp context search`" + ` searches structured and ordinary notes and requires every whitespace-separated query term to match.
+- Before creating a top-level directory, run ` + "`hp layout list --project .`" + `. Use an existing registered location, or document an intentional project-specific directory with ` + "`hp layout add`" + `.
 - Use ` + "`hp finish`" + ` at the end of meaningful work, including ` + "`--status in_progress`" + ` for a partial iteration. It updates the task, writes the work log, and reconciles task-backed state.
 - Use ` + "`hp handoff create`" + ` only when responsibility moves. A handoff supplements ` + "`hp finish`" + `; it does not replace it.
 - Run ` + "`hp project doctor --path .`" + ` before closeout. Do not commit, branch, push, or open a pull request unless the user or repository workflow explicitly requests it.
@@ -183,9 +201,10 @@ func managedSkillInstructions() string {
 1. Run ` + "`hp brief`" + ` and inspect the task inbox before editing.
 2. Continue relevant in-progress work from the brief, or use ` + "`hp task ready`" + ` for unstarted tasks. Mark the chosen task with ` + "`hp task update --status in_progress`" + `.
 3. Use focused ` + "`hp context search`" + ` queries for structured and ordinary notes; every whitespace-separated term must match.
-4. End meaningful work with ` + "`hp finish`" + `; use ` + "`--status in_progress`" + ` for partial work. Create a handoff in addition only when responsibility moves.
-5. Run ` + "`hp project doctor --path <project>`" + ` and repair reported drift. Do not commit, branch, push, or open a pull request unless explicitly requested.
-6. Use ` + "`hp project upgrade --path <project>`" + ` after hp upgrades to refresh managed instructions, hooks, and all supported skill mounts.`
+4. Run ` + "`hp layout list --project <project>`" + ` before creating a top-level directory. Use a registered location or add an intentional project-specific directory with ` + "`hp layout add`" + `.
+5. End meaningful work with ` + "`hp finish`" + `; use ` + "`--status in_progress`" + ` for partial work. Create a handoff in addition only when responsibility moves.
+6. Run ` + "`hp project doctor --path <project>`" + ` and repair reported drift. Do not commit, branch, push, or open a pull request unless explicitly requested.
+7. Use ` + "`hp project upgrade --path <project>`" + ` after hp upgrades to refresh managed instructions, hooks, and all supported skill mounts.`
 }
 
 func managedContextInstructions() string {
@@ -195,5 +214,5 @@ Ordinary Markdown and text notes may live anywhere below this directory except `
 }
 
 func managedCursorInstructions() string {
-	return `Run ` + "`hp brief`" + ` before work. Use ` + "`hp finish`" + ` for meaningful closeout and add a handoff only when responsibility moves. Run ` + "`hp project doctor --path .`" + ` before stopping. Do not commit or push unless explicitly requested.`
+	return `Run ` + "`hp brief`" + ` before work. Check ` + "`hp layout list --project .`" + ` before creating a top-level directory. Use ` + "`hp finish`" + ` for meaningful closeout and add a handoff only when responsibility moves. Run ` + "`hp project doctor --path .`" + ` before stopping. Do not commit or push unless explicitly requested.`
 }

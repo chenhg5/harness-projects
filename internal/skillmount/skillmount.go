@@ -50,6 +50,8 @@ func (err *ConflictError) Error() string {
 	return fmt.Sprintf("skill mount conflict at %s: %s", err.Path, err.Reason)
 }
 
+func (err *ConflictError) Is(target error) bool { return errors.Is(target, os.ErrExist) }
+
 func ParseTargets(value string) ([]string, error) {
 	selected := map[string]bool{}
 	if strings.TrimSpace(value) == "" || strings.TrimSpace(value) == "all" {
@@ -241,7 +243,7 @@ func Apply(plan Plan) error {
 		switch change.Operation {
 		case "create_symlink":
 			if _, err := os.Lstat(change.Path); err == nil {
-				return fmt.Errorf("target appeared since preview: %s", change.Path)
+				return &ConflictError{Path: change.Path, Reason: "target appeared since preview"}
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
@@ -334,17 +336,17 @@ func pointsInside(root, linkDirectory, target string) bool {
 func verifySymlink(path, expected string) error {
 	info, err := os.Lstat(path)
 	if err != nil {
-		return fmt.Errorf("target changed since preview: %s", path)
+		return &ConflictError{Path: path, Reason: "target changed since preview"}
 	}
 	if info.Mode()&os.ModeSymlink == 0 {
-		return fmt.Errorf("target changed since preview: %s", path)
+		return &ConflictError{Path: path, Reason: "target changed since preview"}
 	}
 	actual, err := os.Readlink(path)
 	if err != nil {
 		return err
 	}
 	if actual != expected {
-		return fmt.Errorf("target changed since preview: %s", path)
+		return &ConflictError{Path: path, Reason: "target changed since preview"}
 	}
 	return nil
 }

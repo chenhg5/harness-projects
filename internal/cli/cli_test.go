@@ -165,6 +165,8 @@ func TestContextSearchIncludesPlainNotes(t *testing.T) {
 }
 
 func TestFinishClosesTaskWorklogAndStateTogether(t *testing.T) {
+	t.Setenv("HP_SESSION_ID", "")
+	t.Setenv("CODEX_THREAD_ID", "real-codex-session")
 	root := filepath.Join(t.TempDir(), "demo")
 	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
 		t.Fatalf("init code=%d stderr=%s", code, stderr)
@@ -178,6 +180,14 @@ func TestFinishClosesTaskWorklogAndStateTogether(t *testing.T) {
 	code, _, stderr := run(t, "finish", "--project", root, "--task-id", "api", "--id", "api-session", "--agent", "codex", "--objective", "Build API", "--completed", "Added routes", "--remaining", "None", "--verification", "go test ./...", "--next", "Review output")
 	if code != 0 || stderr != "" {
 		t.Fatalf("finish code=%d stderr=%s", code, stderr)
+	}
+	logs, err := filepath.Glob(filepath.Join(root, "worklogs", "*-api-session.md"))
+	if err != nil || len(logs) != 1 {
+		t.Fatalf("expected one named work log: %v, %v", logs, err)
+	}
+	logData, err := os.ReadFile(logs[0])
+	if err != nil || !bytes.Contains(logData, []byte("- Session ID: real-codex-session")) {
+		t.Fatalf("provider session was not linked to work log: %s, %v", logData, err)
 	}
 	code, stdout, stderr := run(t, "task", "get", "--project", root, "--id", "api", "--json")
 	if code != 0 || stderr != "" {
@@ -209,6 +219,56 @@ func TestFinishClosesTaskWorklogAndStateTogether(t *testing.T) {
 	}
 	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 0 || stderr != "" {
 		t.Fatalf("doctor after finish code=%d stderr=%s stdout=%s", code, stderr, stdout)
+	}
+}
+
+func TestWorklogCreateAcceptsExplicitProviderSession(t *testing.T) {
+	t.Setenv("HP_SESSION_ID", "")
+	t.Setenv("CODEX_THREAD_ID", "environment-session")
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	code, stdout, stderr := run(t, "worklog", "create", "--project", root, "--id", "api-review", "--agent", "claude", "--harness", "claude-code", "--session-id", "claude-session", "--objective", "Review API", "--completed", "Read implementation", "--remaining", "Tests", "--next", "Run tests")
+	if code != 0 || stderr != "" {
+		t.Fatalf("worklog code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	}
+	var result struct {
+		Record struct {
+			ID        string `json:"id"`
+			SessionID string `json:"sessionId"`
+		} `json:"record"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil || result.Record.ID != "api-review" || result.Record.SessionID != "claude-session" {
+		t.Fatalf("worklog IDs differ from request: %s, %v", stdout, err)
+	}
+	code, stdout, stderr = run(t, "worklog", "create", "--project", root, "--id", "api-follow-up", "--objective", "Continue API", "--completed", "Ran tests", "--remaining", "Review", "--next", "Request review")
+	if code != 0 || stderr != "" {
+		t.Fatalf("detected worklog code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	}
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil || result.Record.ID != "api-follow-up" || result.Record.SessionID != "environment-session" {
+		t.Fatalf("provider session was not detected: %s, %v", stdout, err)
+	}
+}
+
+func TestDoctorAcceptsLegacyWorklogAndFlagsIncompleteOne(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "demo")
+	if code, _, stderr := run(t, "project", "init", "--path", root, "--no-git"); code != 0 {
+		t.Fatalf("init code=%d stderr=%s", code, stderr)
+	}
+	legacy := "# Work log\n- **Objective:** Fix search\n## Changes\nDebounced input.\n## Verification\nTests passed.\n## Follow-up\nPreview still needed; review the PR.\n"
+	if err := os.WriteFile(filepath.Join(root, "worklogs", "legacy.md"), []byte(legacy), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 0 || stderr != "" {
+		t.Fatalf("legacy log should be accepted: code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	}
+	incomplete := "# Work log: incomplete\n- Agent: codex\n- Harness: codex\n- Created: 2026-10-26T00:00:00Z\n- Task: api\n- Run: None recorded.\n## Objective\nFix search\n## Completed\n...\n## Remaining\nTests\n## Next action\nRun tests\n## Changes\nNone recorded.\n## Verification\nNone recorded.\n## Blockers\nNone recorded.\n"
+	if err := os.WriteFile(filepath.Join(root, "worklogs", "incomplete.md"), []byte(incomplete), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run(t, "project", "doctor", "--path", root, "--json"); code != 1 || stderr != "" || !bytes.Contains([]byte(stdout), []byte("incomplete_worklogs")) || !bytes.Contains([]byte(stdout), []byte("incomplete.md")) {
+		t.Fatalf("incomplete log should be reported: code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 }
 

@@ -80,8 +80,9 @@ my-project/              # its own Git repository: the shared memory
 - **Files, not a service.** Everything is Markdown and JSON that any agent can read and any human can review in a pull request. No server, no account, no lock-in to one tool.
 - **One brief, any harness.** `hp brief` works from anywhere inside the project, including nested repository worktrees, and gives the same picture to Claude Code, Codex, Cursor, or a person.
 - **Many repositories, one plan.** A feature that touches `web` and `api` has one goal and one task graph; each repository keeps its own branches.
-- **Agent-friendly CLI.** Every `hp` command has JSON output, dry runs, and stable exit codes, so agents drive it without guessing.
-- **Drift is visible.** `hp project doctor` checks whether state, tasks, evidence, work logs, skills, repositories, and worktrees still agree.
+- **Agent-friendly CLI.** Data-producing commands expose JSON, mutations support dry runs, errors are structured, and exit codes are stable, so agents drive it without guessing.
+- **Drift is visible.** `hp project doctor` checks whether state, tasks, evidence, work logs, skills, repositories, worktrees, and top-level directories still agree.
+- **Folder rules are explicit.** `hp layout list` explains every built-in location. Projects can register intentional additions such as `lib/` with `hp layout add`, while `hp project doctor` flags accidental new top-level directories.
 
 Open a read-only dashboard with `hp project serve --path . --open`.
 

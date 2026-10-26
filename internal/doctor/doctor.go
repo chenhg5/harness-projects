@@ -11,6 +11,7 @@ import (
 	"time"
 
 	hpgit "github.com/chenhg5/harness-projects/internal/git"
+	"github.com/chenhg5/harness-projects/internal/layout"
 	"github.com/chenhg5/harness-projects/internal/model"
 	"github.com/chenhg5/harness-projects/internal/project"
 	"github.com/chenhg5/harness-projects/internal/skillmount"
@@ -46,6 +47,14 @@ func Inspect(root string) (Report, error) {
 	if !status.Valid {
 		return report, nil
 	}
+	contract, exists, layoutErr := layout.Load(root)
+	if layoutErr != nil {
+		report.add("invalid_layout_contract", "error", layoutErr.Error(), layout.RelativePath, "Repair the contract or regenerate it with hp project upgrade")
+		contract = layout.Default()
+	} else if !exists {
+		report.add("missing_layout_contract", "warning", "project directory contract is missing", layout.RelativePath, "Run hp project upgrade --path .")
+	}
+	checkProjectDirectories(&report, root, contract)
 	s, err := store.Open(root)
 	if err != nil {
 		return Report{}, err
@@ -75,6 +84,35 @@ func Inspect(root string) (Report, error) {
 		return report.Findings[i].Path < report.Findings[j].Path
 	})
 	return report, nil
+}
+
+func checkProjectDirectories(report *Report, root string, contract layout.Contract) {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		report.add("layout_scan_error", "error", err.Error(), ".", "Repair project directory permissions")
+		return
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			if entry.Type()&os.ModeSymlink == 0 {
+				continue
+			}
+			info, err := os.Stat(filepath.Join(root, entry.Name()))
+			if err != nil || !info.IsDir() {
+				continue
+			}
+		}
+		if layout.Allowed(contract, entry.Name()) {
+			continue
+		}
+		report.add(
+			"unexpected_project_directory",
+			"warning",
+			"top-level directory is not registered in the project layout",
+			entry.Name(),
+			fmt.Sprintf("Move it into a registered location or run hp layout add --project . --name %q --description %q", entry.Name(), "Describe what belongs here"),
+		)
+	}
 }
 
 func (r *Report) add(code, severity, message, path, suggestion string) {
@@ -227,23 +265,22 @@ func checkWorklogs(report *Report, root string) {
 	if err != nil {
 		return
 	}
-	required := []string{"## Objective", "## Completed", "## Remaining", "## Verification", "## Next action"}
 	invalid := 0
+	examples := []string{}
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(root, "worklogs", name))
 		if err != nil {
 			continue
 		}
-		content := string(data)
-		for _, heading := range required {
-			if !strings.Contains(content, heading) {
-				invalid++
-				break
+		if missing := worklog.MissingCoreFields(string(data)); len(missing) > 0 {
+			invalid++
+			if len(examples) < 3 {
+				examples = append(examples, name+" ("+strings.Join(missing, ", ")+")")
 			}
 		}
 	}
 	if invalid > 0 {
-		report.add("nonstandard_worklogs", "warning", fmt.Sprintf("%d work log(s) are missing required sections", invalid), "worklogs", "Use hp worklog create or hp finish for future logs")
+		report.add("incomplete_worklogs", "warning", fmt.Sprintf("%d work log(s) have empty or missing core fields in the CLI template; examples: %s", invalid, strings.Join(examples, "; ")), "worklogs", "Review the examples and record objective, completed work, and unfinished work or next action; use hp finish for new logs")
 	}
 }
 

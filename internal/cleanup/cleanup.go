@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/chenhg5/harness-projects/internal/apperror"
 )
 
 var DefaultSections = []string{"worklogs", "artifacts", "context/imports"}
@@ -164,7 +166,7 @@ func Apply(plan Plan, force bool) (int, error) {
 			return changed, fmt.Errorf("cleanup target is not a regular file: %s", candidate.Path)
 		}
 		if !info.ModTime().Equal(candidate.ModifiedAt) || info.Size() != candidate.Size {
-			return changed, fmt.Errorf("cleanup target changed since preview: %s", candidate.Path)
+			return changed, apperror.Conflict("cleanup target changed since preview: %s", candidate.Path)
 		}
 		if plan.Action == "delete" {
 			if err := os.Remove(candidate.Path); err != nil {

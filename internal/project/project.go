@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chenhg5/harness-projects/internal/apperror"
 	"github.com/chenhg5/harness-projects/internal/hooks"
+	"github.com/chenhg5/harness-projects/internal/layout"
 	"github.com/chenhg5/harness-projects/internal/skillmount"
 )
 
@@ -76,7 +78,7 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 	result := InitResult{Action: "project.init", Path: root, Name: name, Created: true, Changes: []Action{}}
 	if _, err := os.Lstat(root); err == nil {
 		if !ifNotExists {
-			return InitResult{}, nil, fmt.Errorf("project path already exists: %s", root)
+			return InitResult{}, nil, apperror.Conflict("project path already exists: %s", root)
 		}
 		status := Inspect(root)
 		if !status.Valid {
@@ -90,6 +92,10 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 	}
 
 	manifest, err := json.MarshalIndent(Manifest{SchemaVersion: SchemaVersion, Name: name, CreatedAt: now.UTC().Format(time.RFC3339)}, "", "  ")
+	if err != nil {
+		return InitResult{}, nil, err
+	}
+	layoutContract, err := layout.DefaultBytes()
 	if err != nil {
 		return InitResult{}, nil, err
 	}
@@ -118,11 +124,13 @@ func PlanInit(path, name string, ifNotExists bool, now time.Time) (InitResult, m
 		"artifacts/README.md":                    []byte("# Artifacts\n\nStore generated project outputs that are not part of a source repository here.\n"),
 		"integrations/README.md":                 []byte("# Integrations\n\nRecord provider, repository, event, and runner adapter configuration here.\n"),
 		".harness-project/project.json":          append(manifest, '\n'),
+		".harness-project/layout.json":           layoutContract,
 		".cursor/rules/harness-project.mdc":      []byte("---\ndescription: Shared Harness Project context\nalwaysApply: true\n---\n\nRun `hp brief` at the start of work and read `AGENTS.md` and `PROJECT.md`. Use `state/current-plan.md`, `spec/`, and `context/` for portable project context. Close meaningful work with `hp finish`; add a handoff only when responsibility moves. Do not commit or push unless explicitly requested.\n"),
 		".gitignore":                             []byte("# Source checkouts and generated worktrees keep their own Git history.\n/repos/*\n!/repos/README.md\n\n# Machine-local and generated material.\n/archive/*\n!/archive/README.md\n/artifacts/*\n!/artifacts/README.md\n/context/imports/\n*.log\n.DS_Store\n"),
 	}
 	for relative, body := range map[string]string{
 		"AGENTS.md":                              managedWorkflowInstructions(),
+		"CLAUDE.md":                              managedWorkflowInstructions(),
 		"skills/shared/project-context/SKILL.md": managedSkillInstructions(),
 		"context/README.md":                      managedContextInstructions(),
 		".cursor/rules/harness-project.mdc":      managedCursorInstructions(),
@@ -166,13 +174,14 @@ var fileOrder = []string{
 	"handoffs/README.md", "events/README.md", "verification/README.md", "worklogs/README.md", "archive/README.md",
 	"skills/shared/project-context/SKILL.md", "scripts/shared/README.md", "repos/README.md",
 	"state/status.md", "state/current-plan.md", "state/project-state.json", "artifacts/README.md", "integrations/README.md",
-	".harness-project/project.json", ".cursor/rules/harness-project.mdc", ".gitignore", ".claude/settings.json",
+	".harness-project/project.json", ".harness-project/layout.json", ".cursor/rules/harness-project.mdc", ".gitignore", ".claude/settings.json",
 }
 
 // Templates can be generated for new projects without becoming requirements
 // for projects created before the feature existed.
 var optionalFiles = map[string]bool{
 	"agents/coordinator-wakeup.md": true,
+	".harness-project/layout.json": true,
 	".gitignore":                   true,
 	".claude/settings.json":        true,
 }

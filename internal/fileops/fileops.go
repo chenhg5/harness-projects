@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/chenhg5/harness-projects/internal/apperror"
 	"github.com/chenhg5/harness-projects/internal/project"
 )
 
@@ -110,7 +111,7 @@ func PlanWrite(root, section, relative string, content []byte, replace, ifNotExi
 		return WritePlan{}, fmt.Errorf("target is not a regular file: %s", path)
 	}
 	if exists && !replace && !ifNotExists {
-		return WritePlan{}, fmt.Errorf("file already exists: %s; use --replace to update it", path)
+		return WritePlan{}, apperror.Conflict("file already exists: %s; use --replace to update it", path)
 	}
 	hash := sha256.Sum256(content)
 	plan := WritePlan{Action: "file.write", Project: root, Section: section, Path: path, Bytes: len(content), SHA256: hex.EncodeToString(hash[:]), Exists: exists}
@@ -138,10 +139,10 @@ func ApplyWrite(plan WritePlan, content []byte) error {
 	info, err := os.Lstat(plan.Path)
 	if plan.Exists {
 		if err != nil || !info.Mode().IsRegular() {
-			return fmt.Errorf("target changed since preview: %s", plan.Path)
+			return apperror.Conflict("target changed since preview: %s", plan.Path)
 		}
 	} else if err == nil {
-		return fmt.Errorf("target appeared since preview: %s", plan.Path)
+		return apperror.Conflict("target appeared since preview: %s", plan.Path)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}

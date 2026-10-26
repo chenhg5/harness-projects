@@ -26,6 +26,9 @@ func TestInitAndInspect(t *testing.T) {
 	if status.Name != "Demo" || status.Version != SchemaVersion {
 		t.Fatalf("unexpected identity: %#v", status)
 	}
+	if _, err := os.Stat(filepath.Join(root, ".harness-project", "layout.json")); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestInitRequiresIfNotExists(t *testing.T) {
@@ -76,6 +79,11 @@ func TestInitPromptsAgentSessionRegistration(t *testing.T) {
 			if !bytes.Contains(files[path], []byte(command)) {
 				t.Fatalf("%s does not instruct agents to run %q", path, command)
 			}
+		}
+	}
+	for _, command := range []string{"hp brief", "hp finish", "hp layout list"} {
+		if !bytes.Contains(files["CLAUDE.md"], []byte(command)) {
+			t.Fatalf("CLAUDE.md does not instruct agents to run %q", command)
 		}
 	}
 }
@@ -146,6 +154,10 @@ func TestUpgradeRepairsManagedWorkflowAndSkillMounts(t *testing.T) {
 	if err := os.Remove(agents); err != nil {
 		t.Fatal(err)
 	}
+	layoutContract := filepath.Join(root, ".harness-project", "layout.json")
+	if err := os.Remove(layoutContract); err != nil {
+		t.Fatal(err)
+	}
 	agentsFile := filepath.Join(root, "AGENTS.md")
 	content, err := os.ReadFile(agentsFile)
 	if err != nil {
@@ -168,8 +180,23 @@ func TestUpgradeRepairsManagedWorkflowAndSkillMounts(t *testing.T) {
 	if !bytes.Contains(updated, []byte("Project-specific instruction.")) || bytes.Count(updated, []byte(managedStart)) != 1 {
 		t.Fatalf("upgrade did not preserve custom instructions: %s", updated)
 	}
+	claudeFile := filepath.Join(root, "CLAUDE.md")
+	claude, err := os.ReadFile(claudeFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(claude, []byte("hp finish")) || bytes.Count(claude, []byte(managedStart)) != 1 {
+		t.Fatalf("upgrade did not synchronize Claude instructions: %s", claude)
+	}
 	if info, err := os.Lstat(agents); err != nil || info.Mode()&os.ModeSymlink == 0 {
 		t.Fatalf("agents mount not repaired: info=%v err=%v", info, err)
+	}
+	info, err := os.Stat(layoutContract)
+	if err != nil {
+		t.Fatalf("layout contract not restored: %v", err)
+	}
+	if info.Mode().Perm() != 0644 {
+		t.Fatalf("unexpected upgraded layout permissions: %v", info.Mode().Perm())
 	}
 	idempotent, err := PlanUpgrade(root)
 	if err != nil {

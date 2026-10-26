@@ -17,6 +17,8 @@ hp project init --path ./my-project --name "My Project"   # own Git repo; --no-g
 hp brief --project ./my-project
 hp project doctor --path ./my-project
 hp project upgrade --path ./my-project --dry-run
+hp layout list --project ./my-project --format text
+hp layout add --project ./my-project --name lib --description "Third-party reference material"
 hp hook install --project ./my-project
 hp skill sync --project ./my-project --targets claude,agents --dry-run
 hp skill sync --project ./my-project --targets claude,agents
@@ -78,10 +80,10 @@ hp handoff create --project ./my-project --id api-work \
   --from codex --to claude --objective "Build API" \
   --completed "Added routes" --next "Add tests"
 hp handoff latest --project ./my-project --format text
-hp worklog create --project ./my-project --id session-001 --agent codex \
+hp worklog create --project ./my-project --id memory-search --agent codex \
   --objective "Implement memory" --completed "Added search" \
   --remaining "Add docs" --verification "go test ./..." --next "Review"
-hp finish --project ./my-project --task-id inventory-api --id session-002 \
+hp finish --project ./my-project --task-id inventory-api --id api-iteration-1 \
   --objective "Implement API" --completed "Added routes" \
   --remaining "None" --verification "go test ./..." --next "Review"
 hp worklog latest --project ./my-project --format text
@@ -95,8 +97,37 @@ code `10`; `hp finish --dry-run` also returns `"dryRun": true`. Non-TTY output
 defaults to JSON. JSON data goes to stdout and machine-readable errors go to
 stderr.
 
-Work logs are chronological session records. Handoffs are responsibility
-transfers and may include branch, commit, and blocker details. Cleanup only
+## Discoverability and machine contract
+
+Command help and machine-readable schemas come from the same command contract:
+
+```bash
+hp help task create
+hp schema get --command "task create" --json
+```
+
+Help puts runnable examples before prose and lists every long flag, accepted
+values, whether it is required, its default, and the output/error contract.
+`schema get` returns the same description, flags, defaults, examples, output
+shape, and semantic failures as JSON. Every command that supports formatted
+output accepts both `--format json|text` and the `--json` shortcut.
+Do not infer flags from another command or from stale documentation; inspect the
+command contract when generating a call.
+
+Failures are JSON on stderr with `error`, `message`, `suggestion`, `retryable`,
+`input`, and `exitCode`. Exit codes are `1` for operation or validation failure,
+`2` for invalid arguments, `3` for not found, `4` for permission denied, `5`
+for conflict, and `10` for a successful dry run. Conflict classification uses
+typed errors rather than matching message text.
+
+Work logs are chronological session records. `--id` names a work log; it is
+distinct from the provider's session ID. `hp finish` and `hp worklog create`
+detect the current session where supported, and also accept an explicit
+`--session-id <actual-provider-session-id>`. Never invent that ID. The generated
+template uses English headings, while the work log specification permits
+historical and translated prose that carries the same core information.
+Handoffs are responsibility transfers and may include branch, commit, and
+blocker details. Cleanup only
 selects transient sections (`worklogs`, `artifacts`, and `context/imports`);
 the default action archives them under `archive/` and never selects durable
 project history.
@@ -116,8 +147,33 @@ when responsibility moves to another agent or harness; a handoff never replaces
 `hp project validate` checks the portable file structure. `hp project doctor`
 checks operational consistency: state freshness, task/state agreement, source
 references, work-log shape, all four skill mount targets, and registered versus
-physical repositories and worktrees. It exits `1` when it finds drift and does
-not modify the project.
+physical repositories and worktrees. It also checks every top-level directory
+against the built-in layout plus `.harness-project/layout.json`. It exits `1`
+when it finds drift and does not modify the project.
+
+Inspect the directory contract before adding a new top-level folder:
+
+```bash
+hp layout list --project . --format text
+hp layout add --project . --name lib \
+  --description "Third-party reference material" --dry-run
+hp layout add --project . --name lib \
+  --description "Third-party reference material" --if-not-exists
+```
+
+`hp layout add` records intent but does not create the directory. Built-in
+locations cannot be overridden. Use `--if-not-exists` for safe retries and
+`--replace` to update an existing description. Project-specific entries appear
+in `hp brief`, so a fresh agent knows where that project's extra material belongs.
+
+For agents, `layout list` returns `action`, `project`, `contractPath`,
+`schemaVersion`, `contractExists`, and `directories`. `layout add` returns only
+the affected `directory` plus `dryRun`, `changed`, `contractCreated`, `replaced`,
+and `previousDescription` when relevant; it does not repeat the full catalog.
+Successful dry runs exit `10`. Invalid names and mutually exclusive flags exit
+`2`; an existing or built-in directory conflict exits `5`. Errors are JSON on
+stderr with `error`, `message`, `suggestion`, `retryable`, `input`, and
+`exitCode`.
 
 Use `hp state reconcile` to repair task-backed state drift without rewriting
 human judgments such as phase, health, risks, or an intentionally curated next
@@ -127,7 +183,8 @@ After installing a newer `hp`, preview `hp project upgrade --path . --dry-run`,
 then apply it without `--dry-run`. Upgrade maintains a marked workflow section
 inside existing instructions, merges Claude Code hooks, removes the legacy rule
 that ignored durable worktree records, and synchronizes Codex, Claude Code,
-Cursor, and `.agents/skills` mounts. Text outside the managed markers is kept.
+Cursor, and `.agents/skills` mounts. It also creates the directory contract for
+projects made by older versions. Text outside the managed markers is kept.
 
 ## Session start: `hp brief`
 

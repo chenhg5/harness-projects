@@ -4,6 +4,28 @@ All notable changes to Harness Projects will be documented here.
 
 ## Unreleased
 
+## v0.0.10 - 2026-10-26
+
+- Keep the managed hp workflow synchronized in `CLAUDE.md` as well as
+  `AGENTS.md` when creating or upgrading projects.
+- Add a built-in top-level directory contract, project-specific additions in
+  `.harness-project/layout.json`, `hp layout list/add`, agent guidance in
+  `hp brief`, and `hp project doctor` findings for unregistered directories.
+- Align the layout commands with the Agent CLI Guide: consistent noun-verb
+  naming, precise long flags, focused JSON mutation results, documented schema
+  defaults, idempotent retries, semantic exit codes, and actionable JSON errors.
+- Generate example-first command help from the machine-readable schema, enrich
+  every flag with a description and default, expose `--json` consistently, and
+  verify schemas against the flags registered by all command handlers.
+- Classify conflicts through typed errors instead of message matching and add
+  `exitCode` to structured stderr failures.
+- Record the actual provider session ID separately from the work log ID in
+  `hp finish` and `hp worklog create`; detect it when available or accept
+  `--session-id` explicitly.
+- Make `hp project doctor` check empty core fields in CLI-formatted logs
+  without warning about historical or translated work logs solely because
+  their headings differ. Clarify the work log specification and skill guidance.
+
 ## v0.0.9 - 2026-10-25
 
 - Add `hp finish` to update a task, append its work log, and reconcile

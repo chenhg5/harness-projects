@@ -12,7 +12,7 @@ case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *
 if [ -z "$version" ]; then
   version=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=1" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1) || true
 fi
-[ -n "$version" ] || { echo "error: set HP_VERSION=v0.0.9 when the release API is unavailable" >&2; exit 1; }
+[ -n "$version" ] || { echo "error: set HP_VERSION=v0.0.10 when the release API is unavailable" >&2; exit 1; }
 name="hp-$version-$os-$arch"
 base="https://github.com/$REPO/releases/download/$version"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
